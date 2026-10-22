@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import ToolModel from "../player/ToolModel";
+import PackModel from "../player/PackModel";
+import { beeFaceSvg } from "../bees/faces";
 export const palette = {
-  grass: "#79a45c",
-  cliff: "#99aaa0",
-  wood: "#916f49",
-  cream: "#fff1c7",
-  forest: "#264c3f",
-  yellow: "#f5c753",
+  grass: "#65c411",
+  cliff: "#737373",
+  wood: "#8d653f",
+  cream: "#ffffff",
+  forest: "#242424",
+  yellow: "#ffe200",
 };
 export function Box({
   position = [0, 0, 0],
@@ -77,13 +80,13 @@ export function Label({
     const x = c.getContext("2d")!;
     x.fillStyle = background;
     x.beginPath();
-    x.roundRect(2, 2, 1020, 124, 20);
+    x.rect(2, 2, 1020, 124);
     x.fill();
     x.strokeStyle = color + "55";
     x.lineWidth = 3;
     x.stroke();
     x.fillStyle = color;
-    x.font = "600 49px Georgia";
+    x.font = "bold 49px Arial";
     x.textAlign = "center";
     x.textBaseline = "middle";
     x.fillText(text, 512, 66, 970);
@@ -162,7 +165,7 @@ export function Tree({
         </mesh>
         <mesh position={[0, 2.6, 0]} castShadow>
           <sphereGeometry args={[2.2, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color="#d47965" />
+          <meshStandardMaterial color="#e51717" />
         </mesh>
         {[0, 1, 2, 3, 4].map((i) => (
           <Ball
@@ -173,7 +176,7 @@ export function Tree({
               Math.sin(i * 1.3) * 1.3,
             ]}
             scale={[0.35, 0.12, 0.35]}
-            color="#fff3d8"
+            color="#ffffff"
           />
         ))}
       </group>
@@ -181,7 +184,7 @@ export function Tree({
   if (kind === "sunflower")
     return (
       <group position={position} scale={scale}>
-        <Box position={[0, 2, 0]} scale={[0.2, 4, 0.2]} color="#6f9350" />
+        <Box position={[0, 2, 0]} scale={[0.2, 4, 0.2]} color="#15972c" />
         {Array.from({ length: 10 }, (_, i) => (
           <Ball
             key={i}
@@ -191,7 +194,7 @@ export function Tree({
               0,
             ]}
             scale={[0.65, 0.5, 0.25]}
-            color="#f2c74e"
+            color="#ffdd00"
           />
         ))}
         <Ball
@@ -210,24 +213,24 @@ export function Tree({
     <group position={position} scale={scale}>
       <mesh position={[0, 2.3, 0]} castShadow>
         <cylinderGeometry args={[0.45, 0.7, 4.6, 6]} />
-        <meshStandardMaterial color="#907050" />
+        <meshStandardMaterial color="#7d4b28" />
       </mesh>
       {kind === "pine" ? (
         [2.6, 4.1, 5.5].map((y, i) => (
           <mesh key={y} position={[0, y, 0]} castShadow>
             <coneGeometry args={[2.9 - i * 0.65, 3.6, 7]} />
-            <meshStandardMaterial color={i % 2 ? "#527f60" : "#638d64"} />
+            <meshStandardMaterial color={i % 2 ? "#095525" : "#126f25"} />
           </mesh>
         ))
       ) : (
         <>
-          <Ball position={[0, 5.4, 0]} scale={[3.1, 2.8, 3]} color="#7eaa6a" />
+          <Ball position={[0, 5.4, 0]} scale={[3.1, 2.8, 3]} color="#26a642" />
           <Ball
             position={[-1.8, 4.6, 0.6]}
             scale={[2, 1.8, 2]}
-            color="#94b774"
+            color="#45b749"
           />
-          <Ball position={[1.8, 5, 0]} scale={[1.8, 2, 1.9]} color="#719d61" />
+          <Ball position={[1.8, 5, 0]} scale={[1.8, 2, 1.9]} color="#179535" />
         </>
       )}
     </group>
@@ -253,94 +256,111 @@ export function Fence({
             0,
           ]}
           scale={[0.3, 1.6, 0.3]}
-          color="#f5edce"
+          color="#ffffff"
         />
       ))}
       <Box
         position={[0, 0.55, 0]}
         scale={[length, 0.18, 0.16]}
-        color="#efe7ca"
+        color="#ffffff"
       />
       <Box
         position={[0, 1.2, 0]}
         scale={[length, 0.18, 0.16]}
-        color="#f5edce"
+        color="#ffffff"
       />
     </group>
   );
 }
 export function BeeModel({
-  color = "#efc34e",
+  color = "#f6dd78",
   rarity = "Common",
+  face = "basic",
   animate = true,
 }: {
   color?: string;
   rarity?: string;
+  face?: string;
   animate?: boolean;
 }) {
   const wings = useRef<THREE.Group>(null);
+  const texture = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 128;
+    const ctx = c.getContext("2d")!;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.magFilter = THREE.NearestFilter;
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, 128, 128);
+      t.needsUpdate = true;
+    };
+    img.src =
+      "data:image/svg+xml;charset=utf-8," +
+      encodeURIComponent(beeFaceSvg(face, color));
+    return t;
+  }, [face, color]);
+  useEffect(() => () => texture.dispose(), [texture]);
   useFrame(({ clock }) => {
     if (wings.current && animate)
       wings.current.children.forEach(
         (w, i) =>
           (w.rotation.z =
-            Math.sin(clock.elapsedTime * 48 + i * Math.PI) * 0.55),
+            Math.sin(clock.elapsedTime * 42 + i * Math.PI) * 0.45),
       );
   });
   return (
-    <group scale={0.6}>
-      <Box scale={[1.35, 0.9, 1.2]} color={color} />
-      <Box position={[0, 0, 0.28]} scale={[1.39, 0.93, 0.28]} color="#544839" />
-      <Box
-        position={[0, 0, -0.35]}
-        scale={[1.39, 0.93, 0.23]}
-        color="#544839"
-      />
-      <Box position={[0, 0, 0.66]} scale={[1.1, 0.78, 0.12]} color={color} />
-      {[-0.32, 0.32].map((x) => (
-        <group key={x}>
-          <Box
-            position={[x, 0.13, 0.75]}
-            scale={[0.14, 0.19, 0.1]}
-            color="#343c33"
-          />
-          <Box
-            position={[x, 0.57, 0.4]}
-            scale={[0.07, 0.4, 0.07]}
-            color="#504536"
-          />
-          <Ball
-            position={[x, 0.8, 0.4]}
-            scale={[0.12, 0.12, 0.12]}
-            color={color}
-          />
-        </group>
-      ))}
-      <group ref={wings} position={[0, 0.42, 0]}>
+    <group scale={0.8}>
+      <Box scale={[1.25, 1.25, 1.25]} color={color} />
+      <Box position={[0, 0, -0.3]} scale={[1.27, 1.27, 0.2]} color="#252525" />
+      <mesh position={[0, 0, 0.632]}>
+        <planeGeometry args={[1.25, 1.25]} />
+        <meshBasicMaterial map={texture} toneMapped={false} />
+      </mesh>
+      <group ref={wings} position={[0, 0.65, -0.12]}>
         {[-1, 1].map((i) => (
           <mesh
             key={i}
-            position={[i * 0.76, 0.12, -0.12]}
-            rotation={[0.15, 0, i * 0.35]}
-            scale={[0.8, 0.09, 0.48]}
+            position={[i * 0.7, 0.05, 0]}
+            rotation={[0, 0, i * 0.25]}
+            scale={[0.65, 0.06, 0.4]}
           >
-            <sphereGeometry args={[1, 8, 4]} />
-            <meshStandardMaterial
-              color="#eef6e7"
-              transparent
-              opacity={0.82}
-              roughness={0.3}
-            />
+            <sphereGeometry args={[1, 6, 3]} />
+            <meshStandardMaterial color="#f5faff" transparent opacity={0.7} />
           </mesh>
         ))}
       </group>
-      {rarity !== "Common" && (
-        <mesh position={[0, 0.52, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <torusGeometry args={[0.25, 0.08, 4, 8]} />
-          <meshStandardMaterial
-            color={rarity === "Mythic" ? "#eab1d4" : "#fff0b3"}
+      {["demon", "vicious"].includes(face) &&
+        [-0.4, 0, 0.4].map((x) => (
+          <mesh key={x} position={[x, 0.8, 0]}>
+            <coneGeometry args={[0.16, 0.5, 4]} />
+            <meshStandardMaterial color="#1b2330" />
+          </mesh>
+        ))}
+      {face === "bear" &&
+        [-0.52, 0.52].map((x) => (
+          <Ball
+            key={x}
+            position={[x, 0.6, 0]}
+            scale={[0.25, 0.25, 0.2]}
+            color="#725030"
           />
+        ))}
+      {face === "buoyant" && (
+        <mesh position={[0, 1.5, 0]}>
+          <sphereGeometry args={[0.6, 8, 6]} />
+          <meshStandardMaterial color="#5379ce" />
         </mesh>
+      )}
+      {rarity === "Mythic" && (
+        <Box
+          position={[0, -0.66, 0]}
+          scale={[1.28, 0.06, 1.28]}
+          color="#d590eb"
+        />
       )}
     </group>
   );
@@ -351,12 +371,16 @@ export function KeeperModel({
   converting = false,
   bagLevel = 0,
   toolLevel = 0,
+  hatLevel = 0,
+  bootsLevel = 0,
 }: {
   moving?: boolean;
   swing?: number;
   converting?: boolean;
   bagLevel?: number;
   toolLevel?: number;
+  hatLevel?: number;
+  bootsLevel?: number;
 }) {
   const legs = useRef<THREE.Group>(null),
     arm = useRef<THREE.Group>(null);
@@ -384,25 +408,56 @@ export function KeeperModel({
             <Box
               position={[0, -0.3, 0]}
               scale={[0.4, 0.85, 0.45]}
-              color="#4b716c"
+              color="#2876c1"
             />
             <Box
               position={[0, -0.7, 0.12]}
               scale={[0.48, 0.25, 0.7]}
-              color="#495b4c"
+              color={bootsLevel ? "#e5dca2" : "#353535"}
             />
           </group>
         ))}
       </group>
-      <Box position={[0, 1.4, 0]} scale={[1, 0.95, 0.6]} color="#f3e4ba" />
+      <Box position={[0, 1.4, 0]} scale={[1, 0.95, 0.6]} color="#1c70d1" />
       <Box position={[0, 1.12, 0.33]} scale={[1, 0.12, 0.08]} color="#c6a767" />
-      <Box position={[0, 2.15, 0]} scale={[0.8, 0.75, 0.7]} color="#e6bf95" />
-      <Box position={[0, 2.62, 0]} scale={[1.35, 0.18, 1.2]} color="#e6c36d" />
-      <Box position={[0, 2.8, 0]} scale={[0.85, 0.3, 0.8]} color="#eed38e" />
+      <mesh position={[0, 2.15, 0]} castShadow>
+        <cylinderGeometry args={[0.43, 0.43, 0.75, 12]} />
+        <meshStandardMaterial color="#ffda8e" />
+      </mesh>
+      {hatLevel === 1 && (
+        <>
+          <Box
+            position={[0, 2.62, 0]}
+            scale={[1.15, 0.15, 1]}
+            color="#f7d925"
+          />
+          <Box
+            position={[0, 2.8, 0]}
+            scale={[0.85, 0.3, 0.8]}
+            color="#448bd1"
+          />
+          <Box
+            position={[0, 3.08, 0]}
+            scale={[1.25, 0.08, 0.16]}
+            color="#ee2929"
+          />
+        </>
+      )}
+      {hatLevel === 2 && (
+        <>
+          <Box position={[0, 2.62, 0]} scale={[1.35, 0.18, 1.2]} color="#eee" />
+          <Box position={[0, 2.8, 0]} scale={[0.85, 0.3, 0.8]} color="#ddd" />
+          <Box
+            position={[0, 2.1, 0.5]}
+            scale={[0.96, 0.75, 0.05]}
+            color="#8b9da2"
+          />
+        </>
+      )}
       <Box
         position={[0, 2.15, 0.39]}
         scale={[0.73, 0.52, 0.08]}
-        color="#748d7b"
+        color="#ffda8e"
       />
       <Box
         position={[-0.18, 2.2, 0.45]}
@@ -417,56 +472,29 @@ export function KeeperModel({
       <Box
         position={[-0.66, 1.4, 0]}
         scale={[0.32, 0.9, 0.35]}
-        color="#e9c092"
+        color="#ffda8e"
       />
       <group ref={arm} position={[0.63, 1.65, 0]}>
         <Box
           position={[0, -0.3, 0]}
           scale={[0.32, 0.85, 0.35]}
-          color="#e9c092"
+          color="#ffda8e"
         />
-        <mesh
-          position={[0, -0.65, 0.7]}
-          rotation={[Math.PI / 2, 0, 0]}
-          castShadow
-        >
-          <cylinderGeometry args={[0.07, 0.07, 1.6, 6]} />
-          <meshStandardMaterial color="#957245" />
-        </mesh>
-        <mesh
-          position={[0, -0.65, 1.55]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          castShadow
-        >
-          <cylinderGeometry
-            args={[0.55 + toolLevel * 0.04, 0.4, 0.2, toolLevel % 2 ? 6 : 10]}
-          />
-          <meshStandardMaterial
-            color={toolLevel > 2 ? "#b4d2d2" : "#d5b878"}
-            metalness={0.3}
-            roughness={0.6}
-          />
-        </mesh>
+        <group position={[0, -0.65, 1]}>
+          <ToolModel level={toolLevel} />
+        </group>
       </group>
-      <Box
-        position={[0, 1.5, -0.63]}
-        scale={[0.92 + bagLevel * 0.06, 1 + bagLevel * 0.05, 0.55]}
-        color={bagLevel > 1 ? "#b9cfd0" : "#a4b99a"}
-      />
-      <Box
-        position={[0, 1.5, -0.93]}
-        scale={[0.58, 0.52, 0.08]}
-        color="#f2d891"
-      />
-      <Box
-        position={[0, 1.7, -0.99]}
-        scale={[0.36, 0.12, 0.04]}
-        color="#6d8261"
-      />
+      <PackModel level={bagLevel} />
     </group>
   );
 }
-export function Bear({ color = "#af8a65" }: { color?: string }) {
+export function Bear({
+  color = "#af8a65",
+  variant = "",
+}: {
+  color?: string;
+  variant?: string;
+}) {
   const ref = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
     if (ref.current)
@@ -511,7 +539,50 @@ export function Bear({ color = "#af8a65" }: { color?: string }) {
         color="#e5cba0"
       />
       <Ball position={[0, 2.95, 1]} scale={[0.17, 0.13, 0.1]} color="#494739" />
-      <Box position={[0, 2, 0.77]} scale={[1.5, 0.25, 0.1]} color="#6a8b6c" />
+      {variant === "rowan" &&
+        [-0.34, 0.34].map((x) => (
+          <Ball
+            key={x}
+            position={[x, 3.18, 0.75]}
+            scale={[0.3, 0.36, 0.15]}
+            color="#111"
+          />
+        ))}
+      {variant === "sage" && (
+        <>
+          <Box
+            position={[0, 1.5, 0.7]}
+            scale={[1.55, 1.65, 0.15]}
+            color="#fff"
+          />
+          <Box
+            position={[0, 3.2, 0.9]}
+            scale={[1.5, 0.45, 0.1]}
+            color="#56c6e7"
+          />
+          <Box position={[0, 3.2, 1]} scale={[0.18, 0.45, 0.05]} color="#333" />
+        </>
+      )}
+      {variant === "orion" &&
+        [0, 1, 2, 3, 4].map((i) => (
+          <Ball
+            key={i}
+            position={[
+              Math.cos(i * 1.25) * 0.7,
+              3.95,
+              Math.sin(i * 1.25) * 0.5,
+            ]}
+            scale={[0.35, 0.25, 0.3]}
+            color={i % 2 ? "#ec98d0" : "#fbec7d"}
+          />
+        ))}
+      {variant === "pippin" && (
+        <Box
+          position={[0.8, 3.7, 0.2]}
+          scale={[0.8, 0.35, 0.3]}
+          color="#ed94ad"
+        />
+      )}
     </group>
   );
 }

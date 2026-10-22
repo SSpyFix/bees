@@ -29,6 +29,9 @@ export default function StaticBatch({ children }: { children: ReactNode }) {
         material.roughness,
         material.metalness,
         material.side,
+        material.map?.uuid ?? "",
+        material.transparent,
+        material.opacity,
       ].join(":");
       const geo = obj.geometry.clone().applyMatrix4(obj.matrixWorld);
       if (!geo.getAttribute("uv"))

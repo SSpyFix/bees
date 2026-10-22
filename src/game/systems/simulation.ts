@@ -1,10 +1,12 @@
 import {
   FIELDS,
+  EVENT_OFFERS,
   BEES,
   GEAR,
   BAGS,
   TOOLS,
   HIVE,
+  HIVE_PADS,
   QUESTS,
   ENEMY_SPAWNS,
   ENEMY_TYPES,
@@ -62,15 +64,16 @@ export function newBee(s: Game, kind: string): Bee {
 export function createGame(): Game {
   const s: Game = {
     version: 2,
+    hive: 3,
     honey: 0,
     pollen: 0,
-    capacity: 250,
+    capacity: 200,
     tool: "tool-0",
     bag: "bag-0",
     boots: "",
     hat: "",
     owned: ["tool-0", "bag-0"],
-    slots: 3,
+    slots: 25,
     bees: [],
     player: {
       x: 0,
@@ -89,7 +92,14 @@ export function createGame(): Game {
     tokens: [],
     buffs: [],
     floaters: [],
-    inventory: { egg: 1, treat: 5, jelly: 0, booster: 0, converter: 0 },
+    inventory: {
+      egg: 1,
+      treat: 5,
+      jelly: 0,
+      booster: 0,
+      converter: 0,
+      ticket: 0,
+    },
     accepted: {},
     completed: [],
     unlocks: [0],
@@ -103,13 +113,14 @@ export function createGame(): Game {
       levels: 0,
       time: 0,
     },
+    flight: null,
     converting: false,
     clock: 0,
     gatherCooldown: 0,
     lastFull: -10,
     seed: 42719,
     nextId: 1,
-    notification: "Welcome to the meadow. Juniper has a quest for you.",
+    notification: "Welcome to the meadow. Black Bear has a quest for you.",
     noticeId: 1,
     cooldowns: {},
     challenge: null,
@@ -185,6 +196,7 @@ function harvest(s: Game, f: Flower, amount: number) {
       f.multiplier *
       hat *
       multiplier(s, "pollen") *
+      multiplier(s, `field:${f.field}`) *
       multiplier(s, f.color) *
       multiplier(s, "focus") *
       (random(s) < 0.05 * multiplier(s, "critical") ? 2 : 1),
@@ -200,7 +212,7 @@ function harvest(s: Game, f: Flower, amount: number) {
   return value;
 }
 export function collect(s: Game) {
-  if (s.converting) return 0;
+  if (s.converting || s.flight) return 0;
   const tool = TOOLS.find((t) => t.id === s.tool) ?? TOOLS[0];
   s.player.swing = 0.3;
   if (s.pollen >= s.capacity) {
@@ -241,11 +253,23 @@ export function collect(s: Game) {
     );
   return total;
 }
+export const home = (s: Game) => HIVE_PADS[s.hive ?? 3] ?? HIVE;
+export function nearbyHive(s: Game) {
+  return HIVE_PADS.find((p) => distance(s.player, p) < 9 && s.player.y < 2);
+}
+export function claimHive(s: Game, index: number) {
+  const pad = HIVE_PADS[index];
+  if (!pad || distance(s.player, pad) > 9 || s.player.y > 2) return false;
+  s.hive = index;
+  s.converting = false;
+  notify(s, "Hive claimed! Your bees will make honey here.");
+  return true;
+}
 export function atHive(s: Game) {
-  return distance(s.player, HIVE) < 12 && s.player.y < 2;
+  return distance(s.player, home(s)) < 12 && s.player.y < 2;
 }
 export function startConversion(s: Game) {
-  if (!atHive(s) || s.pollen <= 0) return false;
+  if (!atHive(s) || s.pollen <= 0 || s.flight) return false;
   s.converting = true;
   s.bees.forEach((b) => {
     b.state = "hive";
@@ -291,7 +315,7 @@ function moveOnTerrain(s: Game, x: number, z: number) {
       if (s.clock - s.lastFull > 3) {
         notify(
           s,
-          `This trail needs ${locked} bees. Grow your hive at the Hatchery.`,
+          `This trail needs ${locked} bees. Grow your hive at the Basic Egg Shop.`,
         );
         s.lastFull = s.clock;
       }
@@ -317,6 +341,25 @@ export function movePlayer(
 ) {
   const p = s.player;
   dt = clamp(dt, 0, 0.1);
+  if (s.flight) {
+    const f = s.flight;
+    f.elapsed = Math.min(f.duration, f.elapsed + dt);
+    const t = f.elapsed / f.duration;
+    p.x = f.from.x + (f.to.x - f.from.x) * t;
+    p.z = f.from.z + (f.to.z - f.from.z) * t;
+    p.y = f.from.y + (f.to.y - f.from.y) * t + Math.sin(t * Math.PI) * 35;
+    p.yaw = Math.atan2(f.to.x - f.from.x, f.to.z - f.from.z);
+    p.grounded = false;
+    p.moving = false;
+    p.vy = 0;
+    if (t >= 1) {
+      p.y = surface(p.x, p.z) ?? 0;
+      p.grounded = true;
+      s.flight = null;
+      notify(s, "Landed safely.");
+    }
+    return;
+  }
   const len = Math.hypot(dx, dz);
   p.moving = len > 0.01;
   if (len > 0) {
@@ -350,15 +393,15 @@ export function movePlayer(
   }
 }
 export function eggCost(s: Game) {
-  return Math.floor(70 * 1.18 ** s.stats.hatches);
+  return Math.min(10000000, Math.floor(1000 * 1.5 ** s.stats.hatches));
 }
 export function slotCost(s: Game) {
-  return Math.floor(85 * 1.25 ** (s.slots - 3));
+  return Math.floor(3000000 * 1.5 ** (s.slots - 25));
 }
 export function buy(s: Game, id: string) {
   const item = GEAR.find((g) => g.id === id);
   if (item) {
-    if (item.type === "bag" && s.pollen > (item.capacity ?? 250)) {
+    if (item.type === "bag" && s.pollen > (item.capacity ?? 200)) {
       notify(s, "Convert some pollen before equipping a smaller pack.");
       return false;
     }
@@ -379,7 +422,7 @@ export function buy(s: Game, id: string) {
     if (item.type === "tool") s.tool = id;
     if (item.type === "bag") {
       s.bag = id;
-      s.capacity = item.capacity ?? 250;
+      s.capacity = item.capacity ?? 200;
     }
     if (item.type === "boots") s.boots = id;
     if (item.type === "hat") s.hat = id;
@@ -401,7 +444,7 @@ export function buy(s: Game, id: string) {
   s.stats.spent += cost[id];
   event(s, "spend", cost[id]);
   s.inventory[id] = (s.inventory[id] ?? 0) + 1;
-  notify(s, `${id === "egg" ? "Meadow Egg" : id} added to your inventory.`);
+  notify(s, `${id === "egg" ? "Basic Egg" : id} added to your inventory.`);
   return true;
 }
 export function buySlot(s: Game) {
@@ -424,7 +467,7 @@ export function buySlot(s: Game) {
 }
 export function hatch(s: Game) {
   if (s.inventory.egg < 1) {
-    notify(s, "Visit the Hatchery to buy a Meadow Egg.");
+    notify(s, "Visit the Basic Egg Shop to buy a Basic Egg.");
     return false;
   }
   if (s.bees.length >= s.slots) {
@@ -432,22 +475,11 @@ export function hatch(s: Game) {
     return false;
   }
   const r = random(s);
-  const tier =
-    r < 0.45
-      ? 0
-      : r < 0.75
-        ? 1
-        : r < 0.91
-          ? 2
-          : r < 0.98
-            ? 3
-            : r < 0.998
-              ? 4
-              : 5;
+  const tier = r < 0.87 ? 0 : r < 0.97 ? 1 : r < 0.995 ? 2 : 3;
   const choices = BEES.filter(
     (b) =>
       b.rarity ===
-      ["Common", "Rare", "Epic", "Legendary", "Mythic", "Special"][tier],
+      ["Common", "Rare", "Epic", "Legendary", "Mythic", "Event"][tier],
   );
   const def = choices[Math.floor(random(s) * choices.length)];
   s.inventory.egg--;
@@ -460,6 +492,25 @@ export function hatch(s: Game) {
       notify(s, `The ${gate}-bee trails are open!`);
     }
   notify(s, `${def.rarity} ${def.name} joined your swarm!`);
+  return true;
+}
+export function buyEventBee(s: Game, kind: string) {
+  const offer = EVENT_OFFERS.find((o) => o.kind === kind),
+    tent = PLACES.find((p) => p.id === "tickets")!;
+  if (
+    !offer ||
+    s.inventory.ticket < offer.cost ||
+    s.bees.some((b) => b.kind === kind) ||
+    s.bees.length >= s.slots ||
+    distance(s.player, tent) > 7 ||
+    Math.abs(s.player.y - tent.y) > 2.5
+  )
+    return false;
+  s.inventory.ticket -= offer.cost;
+  s.bees.push(newBee(s, kind));
+  s.stats.hatches++;
+  event(s, "hatch", 1);
+  notify(s, `${BEES.find((b) => b.id === kind)!.name} joined your hive!`);
   return true;
 }
 export function releaseBee(s: Game, id: string) {
@@ -490,15 +541,14 @@ export function feed(s: Game, id: string) {
 }
 export function reroll(s: Game, id: string) {
   const b = s.bees.find((b) => b.id === id);
-  if (!b || s.inventory.jelly < 1 || beeDefinition(b).rarity === "Special")
+  if (!b || s.inventory.jelly < 1 || beeDefinition(b).rarity === "Event")
     return false;
   s.inventory.jelly--;
-  const pool = BEES.filter(
-    (x) => x.rarity !== "Common" && x.rarity !== "Special" && x.id !== b.kind,
-  );
   const r = random(s);
-  const max = r < 0.7 ? 7 : r < 0.95 ? 15 : pool.length;
-  b.kind = pool[Math.floor(random(s) * Math.min(max, pool.length))].id;
+  const rarity =
+    r < 0.7 ? "Rare" : r < 0.97 ? "Epic" : r < 0.99996 ? "Legendary" : "Mythic";
+  const pool = BEES.filter((x) => x.rarity === rarity);
+  b.kind = pool[Math.floor(random(s) * pool.length)].id;
   b.energy = beeDefinition(b).energy;
   notify(s, `A little magic: ${beeDefinition(b).name}!`);
   return true;
@@ -534,6 +584,7 @@ export function claimQuest(s: Game, id: string) {
   s.stats.honey += q.honey;
   s.inventory.egg += q.egg;
   s.inventory.treat += q.treat;
+  s.inventory.ticket += 5 + q.gate;
   event(s, "earn", q.honey);
   notify(s, `Quest complete! +${q.honey} honey${q.egg ? " +1 egg" : ""}`);
   return true;
@@ -549,8 +600,10 @@ export function useItem(s: Game, id: string) {
   if (id === "egg") return hatch(s);
   if (id === "booster") {
     s.inventory[id]--;
-    buff(s, "pollen", 2, 60);
-    notify(s, "Flower tonic: double pollen for 60 seconds.");
+    const fields = FIELDS.filter((f) => f.gate <= s.bees.length),
+      field = fields[Math.floor(random(s) * fields.length)];
+    buff(s, `field:${field.id}`, 2, 900);
+    notify(s, `Field Dice: ${field.name} pollen ×2 for 15 minutes.`);
     return true;
   }
   if (id === "converter") {
@@ -562,12 +615,39 @@ export function useItem(s: Game, id: string) {
     s.pollen = 0;
     event(s, "convert", value);
     event(s, "earn", value);
-    notify(s, "Pocket converter turned your pollen into honey.");
+    notify(s, "Micro-Converter turned your pollen into honey.");
     return true;
   }
   return false;
 }
 export function interactPlace(s: Game, id: string) {
+  if (id === "red-cannon" || id === "mountain-cannon") {
+    const cannon = PLACES.find((p) => p.id === id)!;
+    if (
+      s.flight ||
+      distance(s.player, cannon) > 7 ||
+      Math.abs(s.player.y - cannon.y) > 2.5
+    )
+      return false;
+    const gate = id === "red-cannon" ? 25 : 0;
+    if (s.bees.length < gate) {
+      notify(s, `${gate} bees required to use this cannon.`);
+      return false;
+    }
+    const to =
+      id === "red-cannon"
+        ? { x: 0, y: 32, z: -145 }
+        : { x: home(s).x, y: 0, z: 53 };
+    s.flight = {
+      from: { x: s.player.x, y: s.player.y, z: s.player.z },
+      to,
+      elapsed: 0,
+      duration: 3.5,
+    };
+    s.converting = false;
+    notify(s, "Cannon launched!");
+    return true;
+  }
   const now = Date.now() / 1000;
   if ((s.cooldowns[id] ?? 0) > now) {
     notify(s, `Ready again in ${Math.ceil(s.cooldowns[id] - now)} seconds.`);
@@ -586,11 +666,12 @@ export function interactPlace(s: Game, id: string) {
     return true;
   }
   if (id === "daily") {
+    s.inventory.ticket += 5;
     s.honey += 150;
     s.stats.honey += 150;
     event(s, "earn", 150);
     s.cooldowns[id] = now + 86400;
-    notify(s, "Daily harvest: +150 honey!");
+    notify(s, "Daily harvest: +150 honey and 5 tickets!");
     return true;
   }
   if (id === "challenge") {
@@ -601,7 +682,7 @@ export function interactPlace(s: Game, id: string) {
     s.challenge = { remaining: 60, gathered: 0, target: 500 };
     notify(
       s,
-      "Clover Sprint: gather 500 pollen in 60 seconds! Reward: 250 honey + an egg.",
+      "Clover Challenge: gather 500 pollen in 60 seconds! Reward: 250 honey + an egg.",
     );
     return true;
   }
@@ -651,9 +732,9 @@ function swarm(s: Game, dt: number) {
       if (
         fly(
           b,
-          HIVE.x + ((index % 7) - 3) * 0.8,
+          home(s).x + ((index % 7) - 3) * 0.8,
           1.5 + Math.floor(index / 7) * 0.75,
-          HIVE.z - 1,
+          home(s).z - 1,
           dt,
           speed,
         )
@@ -703,7 +784,7 @@ function swarm(s: Game, dt: number) {
         if (enemy.hp === 0) {
           s.stats.kills++;
           event(s, "kill", 1, ENEMY_TYPES[enemy.type].id);
-          enemy.respawn = s.clock + (enemy.type === 6 ? 120 : 45);
+          enemy.respawn = s.clock + (enemy.type >= 6 ? 120 : 45);
           enemy.hit = 0.6;
           for (let i = 0; i < 3; i++)
             spawnToken(
@@ -714,6 +795,14 @@ function swarm(s: Game, dt: number) {
               "honey",
               ENEMY_TYPES[enemy.type].reward / 3,
             );
+          spawnToken(
+            s,
+            enemy.x,
+            enemy.y,
+            enemy.z,
+            "ticket",
+            enemy.type >= 6 ? 10 : 1,
+          );
           if (random(s) < 0.3)
             spawnToken(s, enemy.x, enemy.y, enemy.z, "treat", 2);
           notify(
@@ -831,6 +920,7 @@ function enemies(s: Game, dt: number) {
     const d = distance(e, p),
       def = ENEMY_TYPES[e.type],
       near =
+        !s.flight &&
         d < 12 &&
         Math.abs(e.y - p.y) < 2 &&
         distance(e, { x: e.homeX, z: e.homeZ }) < 18;
@@ -841,27 +931,27 @@ function enemies(s: Game, dt: number) {
       e.x += ((tx - e.x) / dist) * dt * def.speed;
       e.z += ((tz - e.z) / dist) * dt * def.speed;
     }
-    if (near && e.type === 6 && e.cooldown < 0.65 && e.cooldown > 0)
+    if (near && e.type >= 6 && e.cooldown < 0.65 && e.cooldown > 0)
       e.windup = 0.7;
     else e.windup = Math.max(0, e.windup - dt);
     if (
       near &&
-      d < (e.type === 6 ? 5 : 2.3) &&
+      d < (e.type >= 6 ? 5 : 2.3) &&
       e.cooldown <= 0 &&
       p.invulnerable <= 0
     ) {
       p.hp = Math.max(0, p.hp - def.damage);
       p.invulnerable = 1.2;
-      e.cooldown = e.type === 6 ? 3 : 1.8;
+      e.cooldown = e.type >= 6 ? 3 : 1.8;
       floating(s, p.x, p.y + 3, p.z, `−${def.damage} HP`, "#ef8d7b");
       const nx = p.x + ((p.x - e.x) / Math.max(d, 0.1)) * 1.5,
         nz = p.z + ((p.z - e.z) / Math.max(d, 0.1)) * 1.5;
       moveOnTerrain(s, nx, nz);
       p.y = Math.max(p.y, surface(p.x, p.z) ?? p.y);
       if (p.hp <= 0) {
-        p.x = HIVE.x;
+        p.x = home(s).x;
         p.y = 0;
-        p.z = HIVE.z - 8;
+        p.z = home(s).z - 8;
         p.hp = 100;
         p.invulnerable = 5;
         s.pollen = Math.floor(s.pollen * 0.8);
@@ -887,7 +977,16 @@ function tokens(s: Game, dt: number) {
         event(s, "earn", t.value);
         floating(s, t.x, t.y + 1, t.z, `+${Math.round(t.value)} honey`);
       } else if (t.kind === "treat") s.inventory.treat += t.value;
-      else if (t.kind === "bomb") {
+      else if (t.kind === "ticket") {
+        s.inventory.ticket += t.value;
+        floating(
+          s,
+          t.x,
+          t.y + 1,
+          t.z,
+          `+${t.value} ticket${t.value === 1 ? "" : "s"}`,
+        );
+      } else if (t.kind === "bomb") {
         for (const f of s.flowers)
           if (distance(f, t) < 7 && Math.abs(f.y - t.y) < 3) harvest(s, f, 15);
         floating(s, t.x, t.y + 1, t.z, "Pollen bloom!");
@@ -934,13 +1033,13 @@ export function step(s: Game, dt: number) {
       event(s, "earn", 250);
       s.challenge = null;
       s.cooldowns.challenge = Date.now() / 1000 + 120;
-      notify(s, "Sprint complete! +250 honey and a Meadow Egg.");
+      notify(s, "Sprint complete! +250 honey and a Basic Egg.");
     } else if (s.challenge.remaining <= 0) {
       s.challenge = null;
       s.cooldowns.challenge = Date.now() / 1000 + 30;
       notify(
         s,
-        "Time is up. Unload your pack and try the Clover Sprint again.",
+        "Time is up. Unload your pack and try the Clover Challenge again.",
       );
     }
   }
@@ -965,6 +1064,7 @@ export function serialize(s: Game) {
   return JSON.stringify({
     version: 2,
     position: { x: s.player.x, z: s.player.z },
+    hive: s.hive,
     honey: s.honey,
     pollen: s.pollen,
     tool: s.tool,
@@ -1003,8 +1103,9 @@ export function restore(raw: string | null): Game {
     const num = (v: unknown, fallback: number, max = 1e15) =>
       typeof v === "number" && Number.isFinite(v) ? clamp(v, 0, max) : fallback;
     s.honey = num(d.honey, 0);
+    s.hive = Math.floor(num(d.hive, 3, 5));
     s.slots = Math.floor(num(d.slots, 3, 50));
-    s.slots = Math.max(3, s.slots);
+    s.slots = Math.max(25, s.slots);
     s.owned = Array.isArray(d.owned)
       ? [
           ...new Set([
@@ -1029,7 +1130,7 @@ export function restore(raw: string | null): Game {
       )
         s[key] = d[key];
     }
-    s.capacity = BAGS.find((b) => b.id === s.bag)?.capacity ?? 250;
+    s.capacity = BAGS.find((b) => b.id === s.bag)?.capacity ?? 200;
     s.pollen = num(d.pollen, 0, s.capacity);
     if (Array.isArray(d.bees)) {
       const valid = d.bees
@@ -1043,7 +1144,11 @@ export function restore(raw: string | null): Game {
           ...newBee(s, String(b.kind)),
           level: Math.max(1, Math.floor(num(b.level, 1, 50))),
           bond: num(b.bond, 0, 1e6),
-          energy: num(b.energy, 40, 200),
+          energy: num(
+            b.energy,
+            BEES.find((d) => d.id === b.kind)!.energy,
+            BEES.find((d) => d.id === b.kind)!.energy,
+          ),
         }));
     }
     for (const k of Object.keys(s.inventory))

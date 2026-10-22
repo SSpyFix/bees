@@ -58,6 +58,7 @@ export type Floater = Vec & {
 };
 export type Game = {
   version: 2;
+  hive: number;
   honey: number;
   pollen: number;
   capacity: number;
@@ -96,6 +97,7 @@ export type Game = {
     levels: number;
     time: number;
   };
+  flight: { from: Vec; to: Vec; elapsed: number; duration: number } | null;
   converting: boolean;
   clock: number;
   gatherCooldown: number;

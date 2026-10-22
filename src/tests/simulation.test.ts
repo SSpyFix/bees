@@ -96,12 +96,12 @@ describe("economy and hive", () => {
   });
   it("hatches eggs only into available slots and buys more slots", () => {
     const s = createGame();
-    s.inventory.egg = 10;
+    s.inventory.egg = 60;
     while (s.bees.length < s.slots) expect(hatch(s)).toBe(true);
     const eggs = s.inventory.egg;
     expect(hatch(s)).toBe(false);
     expect(s.inventory.egg).toBe(eggs);
-    s.honey = 100000;
+    s.honey = 100000000;
     expect(buySlot(s)).toBe(true);
     expect(hatch(s)).toBe(true);
   });
@@ -123,7 +123,7 @@ describe("economy and hive", () => {
     const s = createGame();
     s.inventory.booster = 1;
     expect(useItem(s, "booster")).toBe(true);
-    expect(s.buffs.some((x) => x.kind === "pollen")).toBe(true);
+    expect(s.buffs.some((x) => x.kind.startsWith("field:"))).toBe(true);
     expect(useItem(s, "booster")).toBe(false);
   });
 });
@@ -237,7 +237,7 @@ describe("terrain and progression edge cases", () => {
     s.pollen = 500;
     expect(buy(s, "bag-0")).toBe(false);
     expect(s.pollen).toBe(500);
-    expect(s.capacity).toBe(700);
+    expect(s.capacity).toBe(750);
   });
   it("does not let players walk through field fences", () => {
     const s = inField();

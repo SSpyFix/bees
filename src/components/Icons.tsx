@@ -1,39 +1,22 @@
+import { beeFaceMarkup } from "../game/bees/faces";
 export function BeeIcon({
-  color = "#e6b847",
+  color = "#f6dd78",
   size = 32,
+  face = "basic",
 }: {
   color?: string;
   size?: number;
+  face?: string;
 }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 48 48"
-      fill="none"
+      viewBox="0 0 64 64"
       aria-hidden="true"
-    >
-      <ellipse
-        cx="17"
-        cy="12"
-        rx="10"
-        ry="7"
-        transform="rotate(-25 17 12)"
-        fill="#e4ecd6"
-      />
-      <ellipse
-        cx="33"
-        cy="12"
-        rx="10"
-        ry="7"
-        transform="rotate(25 33 12)"
-        fill="#e4ecd6"
-      />
-      <rect x="8" y="16" width="33" height="24" rx="10" fill={color} />
-      <path d="M18 17v22M29 17v22" stroke="#4c4a32" strokeWidth="5" />
-      <circle cx="37" cy="24" r="2" fill="#34493b" />
-      <path d="m4 28 5-3v6Z" fill="#4c4a32" />
-    </svg>
+      className="bee-face"
+      dangerouslySetInnerHTML={{ __html: beeFaceMarkup(face, color) }}
+    />
   );
 }
 export function HoneyIcon() {

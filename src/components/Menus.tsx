@@ -1,3 +1,5 @@
+import TicketShop from "./TicketShop";
+import BeeIndex from "./BeeIndex";
 import { useState } from "react";
 import { useGame, sound } from "../game/systems/store";
 import {
@@ -5,7 +7,7 @@ import {
   BEES,
   FIELDS,
   GEAR,
-  HIVE,
+  HIVE_PADS,
   PLACES,
   PLATFORMS,
   QUESTS,
@@ -87,7 +89,7 @@ export function QuestCard({
       <div className="quest-reward">
         <span>
           ✦ {number(q.honey)} honey {q.egg > 0 && " · 🥚 1 egg"} · {q.treat}{" "}
-          treats
+          treats · {5 + q.gate} tickets
         </span>
         {ready ? (
           <button
@@ -123,12 +125,18 @@ function Shop() {
   const placeId = useGame((g) => g.placeId);
   const [tab, setTab] = useState("tool");
   const tier = PLACES.find((p) => p.id === placeId)?.gate ?? 0;
+  const headquarters =
+    placeId === "blue-hq" ? "blue" : placeId === "red-hq" ? "red" : null;
   const items = GEAR.filter(
     (g) =>
       (tab === "other"
         ? g.type === "boots" || g.type === "hat"
         : g.type === tab) &&
-      g.gate <= (tier === 0 ? 5 : tier === 10 ? 15 : tier === 25 ? 25 : 35),
+      (headquarters
+        ? (g.type === "tool" && g.color === headquarters) ||
+          (g.type !== "tool" && g.gate <= 15)
+        : g.gate <=
+          (tier === 0 ? 5 : tier === 10 ? 15 : tier === 25 ? 25 : 35)),
   );
   return (
     <>
@@ -236,15 +244,15 @@ function EggShop() {
   const items = [
     {
       id: "egg",
-      name: "Meadow Egg",
+      name: "Basic Egg",
       cost: eggCost(s),
       description:
-        "A new friend, waiting to hatch. Common through Special rarity. Prices grow with your swarm.",
+        "Hatches a Common, Rare, Epic or Legendary bee. Prices grow with your swarm.",
       type: "egg",
     },
     {
       id: "treat",
-      name: "Clover Treat",
+      name: "Treat",
       cost: 12,
       description:
         "Feed a bee for 25 bond and a little energy. Bond unlocks stronger levels.",
@@ -252,7 +260,7 @@ function EggShop() {
     },
     {
       id: "jelly",
-      name: "Royal Nectar",
+      name: "Royal Jelly",
       cost: 180,
       description:
         "Transform a bee into a new Rare or better species. Keeps its level.",
@@ -260,15 +268,15 @@ function EggShop() {
     },
     {
       id: "booster",
-      name: "Flower Tonic",
+      name: "Field Dice",
       cost: 120,
       description:
-        "Double all pollen collection for 60 seconds. Use from your inventory.",
+        "Double pollen in a randomly selected unlocked field for 15 minutes.",
       type: "tool",
     },
     {
       id: "converter",
-      name: "Pocket Converter",
+      name: "Micro-Converter",
       cost: 90,
       description:
         "Instantly turn your carried pollen into honey, wherever you are.",
@@ -303,8 +311,7 @@ function EggShop() {
       </div>
       <div className="menu-footer">
         <span>
-          Meadow Egg odds: Common 45% · Rare 30% · Epic 16% · Legendary 7% ·
-          Mythic 1.8% · Special 0.2%
+          Basic Egg odds: Common 87% · Rare 10% · Epic 2.5% · Legendary 0.5%
         </span>
       </div>
     </>
@@ -365,7 +372,7 @@ function Hive() {
               >
                 {d ? (
                   <>
-                    <BeeIcon color={d.body} />
+                    <BeeIcon face={d.face} color={d.body} />
                     <span>Lv. {bee!.level}</span>
                   </>
                 ) : (
@@ -383,7 +390,7 @@ function Hive() {
             {def.rarity}
           </span>
           <div className="big-bee">
-            <BeeIcon color={def.body} size={96} />
+            <BeeIcon face={def.face} color={def.body} size={96} />
           </div>
           <h3>{def.name}</h3>
           <p>
@@ -437,10 +444,10 @@ function Hive() {
           </button>
           <button
             className="button secondary"
-            disabled={s.inventory.jelly < 1 || def.rarity === "Special"}
+            disabled={s.inventory.jelly < 1 || def.rarity === "Event"}
             onClick={() => action(() => reroll(s, b.id))}
           >
-            Use Royal Nectar · {s.inventory.jelly} left
+            Use Royal Jelly · {s.inventory.jelly} left
           </button>
           {releaseConfirm ? (
             <div className="release-confirm">
@@ -482,24 +489,24 @@ function Inventory() {
   const s = useGame((g) => g.game);
   useGame((g) => g.revision);
   const descriptions: Record<string, [string, string, string]> = {
-    egg: ["Meadow Egg", "Hatch a new friend into an empty hive slot.", "Hatch"],
+    egg: ["Basic Egg", "Hatch a new friend into an empty hive slot.", "Hatch"],
     treat: [
-      "Clover Treat",
+      "Treat",
       "Give 25 bond to your first bee. Use Hive to choose a different bee.",
       "Feed first bee",
     ],
     jelly: [
-      "Royal Nectar",
+      "Royal Jelly",
       "Transform your first bee. Use Hive to choose a different bee.",
       "Transform first bee",
     ],
     booster: [
-      "Flower Tonic",
-      "Double pollen collection for 60 seconds.",
-      "Drink tonic",
+      "Field Dice",
+      "Double pollen in a randomly selected unlocked field for 15 minutes.",
+      "Roll Field Dice",
     ],
     converter: [
-      "Pocket Converter",
+      "Micro-Converter",
       "Instantly convert all carried pollen into honey.",
       "Convert pollen",
     ],
@@ -507,7 +514,7 @@ function Inventory() {
   return (
     <>
       <p className="menu-intro">
-        A few useful things for the trail. All consumables are used once.
+        Tickets: {s.inventory.ticket} · All consumables are used once.
       </p>
       <div className="inventory-list">
         {Object.entries(descriptions).map(
@@ -563,6 +570,7 @@ function Inventory() {
               }
             >
               <BeeIcon
+                face={b.face}
                 color={s.bees.some((x) => x.kind === b.id) ? b.body : "#c8cbb4"}
                 size={32}
               />
@@ -589,8 +597,8 @@ function Journal() {
           <span>❀</span>
           <h3>A fresh page</h3>
           <p>
-            Visit Juniper near Dandelion Lawn. Press E to talk and accept your
-            first quest.
+            Visit Black Bear near Dandelion Field. Press E to talk and accept
+            your first quest.
           </p>
         </div>
       )}
@@ -747,13 +755,16 @@ export function MountainMap({ mini = false }: { mini?: boolean }) {
             fill={p.kind === "npc" ? "#8d7157" : "#647f6b"}
           />
         ))}
-      <rect
-        x={HIVE.x - 6}
-        y={HIVE.z - 4}
-        width="12"
-        height="6"
-        fill="#d1a75c"
-      />
+      {HIVE_PADS.map((h) => (
+        <rect
+          key={h.index}
+          x={h.x - 6}
+          y={h.z - 4}
+          width="12"
+          height="6"
+          fill={h.index === s.hive ? "#ffe000" : "#d1a75c"}
+        />
+      ))}
       <circle
         data-testid={mini ? "map-player" : undefined}
         cx={s.player.x}
@@ -806,7 +817,7 @@ function MapMenu() {
         <p className="map-legend">
           ● You &nbsp; ◼ Flower fields &nbsp; · Shops & keepers
           <br />
-          Exploration happens on foot. No fast travel.
+          Walk the branching ramps or use the cannons.
         </p>
       </aside>
     </div>
@@ -950,13 +961,15 @@ export default function Menus() {
     placeId = useGame((s) => s.placeId);
   if (!menu) return null;
   const titles = {
-    shop: PLACES.find((p) => p.id === placeId)?.name ?? "The Little Supply Co.",
-    eggs: "The Hatchery",
-    hive: "A home for your swarm",
-    quests: "Your field journal",
-    inventory: "Your trail bag",
-    map: "The mountain trails",
-    settings: "Take a breather",
+    shop: PLACES.find((p) => p.id === placeId)?.name ?? "Basic Shop",
+    eggs: "Basic Egg Shop",
+    tickets: "Ticket Tent",
+    hive: "Your Hive",
+    bees: "Bees",
+    quests: "Quests",
+    inventory: "Inventory",
+    map: "World Map",
+    settings: "Settings",
     npc: PLACES.find((p) => p.id === placeId)?.name ?? "Mountain keeper",
   };
   return (
@@ -975,7 +988,7 @@ export default function Menus() {
         <header className="modal-header">
           <div>
             <span className="eyebrow">
-              POLLEN PEAK ·{" "}
+              BEE SWARM SIMULATOR ·{" "}
               {menu === "shop" || menu === "eggs"
                 ? "MOUNTAIN MERCHANTS"
                 : menu === "npc"
@@ -996,7 +1009,11 @@ export default function Menus() {
           </button>
         </header>
         <div className="modal-content">
-          {menu === "shop" ? (
+          {menu === "tickets" ? (
+            <TicketShop />
+          ) : menu === "bees" ? (
+            <BeeIndex />
+          ) : menu === "shop" ? (
             <Shop />
           ) : menu === "eggs" ? (
             <EggShop />
@@ -1015,9 +1032,9 @@ export default function Menus() {
           )}
         </div>
         <footer className="modal-bottom">
-          <span>✦ A little progress, a little wonder.</span>
+          <span>Bee Swarm Simulator · Browser recreation</span>
           <button className="text-button" onClick={() => open(null)}>
-            ESC · Back to the mountain
+            ESC · Back to game
           </button>
         </footer>
       </section>

@@ -6,12 +6,17 @@ import { KeeperModel } from "../world/models";
 import { useGame, sound } from "../systems/store";
 import {
   atHive,
+  nearbyHive,
+  claimHive,
   collect,
   movePlayer,
   nearestPlace,
   step,
   startConversion,
   interactPlace,
+  useItem,
+  feed,
+  reroll,
 } from "../systems/simulation";
 import { surface } from "../world/terrain";
 import { TOOLS } from "../data/content";
@@ -26,9 +31,9 @@ function Controller() {
     gather: false,
     rotate: false,
     jumpQueued: false,
-    yaw: 0,
-    pitch: 0.55,
-    distance: 62,
+    yaw: 0.38,
+    pitch: 0.62,
+    distance: 52,
     target: new THREE.Vector3(0, 2, 44),
     tick: 0,
     ui: 0,
@@ -65,7 +70,8 @@ function Controller() {
         e.code === "KeyQ" ||
         e.code === "Tab" ||
         e.code === "KeyM" ||
-        e.code === "KeyH"
+        e.code === "KeyH" ||
+        e.code === "KeyB"
       ) {
         const menu =
           e.code === "KeyQ"
@@ -74,12 +80,29 @@ function Controller() {
               ? "inventory"
               : e.code === "KeyH"
                 ? "hive"
-                : "map";
+                : e.code === "KeyB"
+                  ? "bees"
+                  : "map";
         state.open(state.menu === menu ? null : menu);
         clear();
         return;
       }
       if (state.menu) return;
+      if (e.code.startsWith("Digit")) {
+        const n = Number(e.code.slice(5));
+        if (n === 2) useItem(game, "egg");
+        if (n === 3) useItem(game, "booster");
+        if (n === 4) useItem(game, "converter");
+        if (n === 5) feed(game, game.bees[0].id);
+        if (n === 6) reroll(game, game.bees[0].id);
+        if (n === 7) state.open("inventory");
+        if (n === 8) state.open("hive");
+        if (n === 9) state.open("bees");
+        if (n === 0) state.open("map");
+        state.refresh();
+        state.save();
+        return;
+      }
       inp.keys.add(e.code);
       if (e.code === "Space") inp.jumpQueued = true;
       if (e.code === "KeyF") {
@@ -90,7 +113,12 @@ function Controller() {
       if (e.code === "KeyE") {
         const p = nearestPlace(game);
         if (p) {
-          if (p.kind === "shop" || p.kind === "eggs" || p.kind === "npc")
+          if (
+            p.kind === "shop" ||
+            p.kind === "eggs" ||
+            p.kind === "npc" ||
+            p.kind === "tickets"
+          )
             state.open(p.kind, p.id);
           else {
             interactPlace(game, p.id);
@@ -98,6 +126,10 @@ function Controller() {
             state.refresh();
           }
         } else if (atHive(game)) state.open("hive");
+        else {
+          const h = nearbyHive(game);
+          if (h) claimHive(game, h.index);
+        }
         clear();
       }
     };
@@ -204,7 +236,7 @@ function Controller() {
     const aim = new THREE.Vector3(
       game.player.x,
       game.player.y + 1.8,
-      game.player.z - 15,
+      game.player.z - 8,
     );
     i.target.lerp(aim, 1 - Math.exp(-dt * 5));
     let dist = i.distance;
@@ -245,6 +277,8 @@ function Controller() {
         converting={game.converting}
         bagLevel={Number(game.bag.split("-")[1])}
         toolLevel={Number(game.tool.split("-")[1])}
+        hatLevel={Number(game.hat.split("-")[1]) || 0}
+        bootsLevel={Number(game.boots.split("-")[1]) || 0}
       />
       {game.converting && (
         <mesh position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -264,19 +298,19 @@ export default function Scene() {
       camera={{ position: [0, 35, 91], fov: 50, near: 0.2, far: 650 }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
-        gl.setClearColor("#d7e9d8");
-        gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 0.92;
+        gl.setClearColor("#9ecbfa");
+        gl.toneMapping = THREE.NoToneMapping;
+        gl.toneMappingExposure = 1;
       }}
     >
-      <color attach="background" args={["#d7e9d8"]} />
-      <fog attach="fog" args={["#d7e9d8", 110, 340]} />
+      <color attach="background" args={["#9ecbfa"]} />
+      <fog attach="fog" args={["#9ecbfa", 110, 340]} />
       <ambientLight intensity={0.55} />
-      <hemisphereLight args={["#fff7df", "#718557", 1.05]} />
+      <hemisphereLight args={["#ffffff", "#8caa73", 0.8]} />
       <directionalLight
         position={[-35, 65, 25]}
-        intensity={2.1}
-        color="#fff1cf"
+        intensity={1.5}
+        color="#ffffff"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-75}

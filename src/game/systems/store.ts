@@ -13,7 +13,9 @@ export type Menu =
   | null
   | "shop"
   | "eggs"
+  | "tickets"
   | "hive"
+  | "bees"
   | "quests"
   | "inventory"
   | "map"
