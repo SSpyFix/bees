@@ -54,8 +54,15 @@ This is an original standalone game, not a reproduction of proprietary game asse
 
 ## Publish on GitHub Pages
 
-The repository includes `.github/workflows/deploy-pages.yml`. Every push to `main` runs the simulation tests, builds the game, and deploys `dist/` to GitHub Pages.
+The repository includes `.github/workflows/deploy-pages.yml`. This optional workflow can be started manually from GitHub Actions after Pages is enabled. It runs the simulation tests, builds the game, and deploys `dist/`. Vercel is the primary automatic deployment for pushes to `main`.
 
-In the repository's **Settings → Pages**, choose **GitHub Actions** as the build source. After the deployment workflow completes, GitHub shows the live website URL. For `SSpyFix/juuuuice`, the standard project URL is `https://sspyfix.github.io/juuuuice/`.
+In the repository's **Settings → Pages**, choose **GitHub Actions** as the build source. After the deployment workflow completes, GitHub shows the live website URL. For `SSpyFix/bees`, the standard project URL is `https://sspyfix.github.io/bees/`.
 
 Assets use relative paths so the game works under the repository subdirectory and on a custom domain. A private repository needs a GitHub plan that supports Pages for private repositories; alternatively the owner can choose to make it public. Repository visibility is never changed by this workflow.
+
+
+## Publish on Vercel
+
+Import the public GitHub repository `SSpyFix/bees` into Vercel, or connect it to an existing Vercel project. Use the repository root as **Root Directory**. The checked-in `vercel.json` selects the **Vite** framework, installs locked dependencies with `npm ci`, builds with `npm run build`, and publishes **dist**. No environment variables or backend services are required.
+
+Pushes to `main` trigger the connected Vercel production deployment. A deployment marked **Blocked** must be reviewed in the Vercel dashboard; the repository cannot grant account access or override deployment approval. The existing project domain is `https://juuuuice.vercel.app/`; a newly imported project receives its own Vercel URL.
