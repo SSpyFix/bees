@@ -89,3 +89,9 @@ Equipment shops and the egg dispenser now show a large preview, blue item descri
 ## 1.1.1 — Bee appearance update
 
 All 46 faces were redrawn from the supplied reference sheet, with matching species colors shared by the index, hive, and 3D models. Bee faces are visible on the front and top surfaces. Species details include Frosty's top hat, Carpenter's hammer, Demon horns, Diamond's crystal, Lion's mane, Ninja's headband, Buoyant's balloon, Spicy's exhaust pipes, animal ears, Digital's antenna, Festive's ribbon, Vicious spikes, and other distinctive shapes. These are local vector and mesh recreations; no remote asset downloads are required during play. Existing bee IDs, abilities, stats, gifted state, and saved progression remain compatible.
+
+## 1.1.2 — Token visuals, field marks, and steady movement
+
+Bee faces now appear only on the front; the extra top-face decals are removed. Floating ability-name rectangles are gone, and pollen/damage popups use compact outlined text on transparent backgrounds. Ability tokens use local icon artwork drawn from the supplied token reference, shared with the buff HUD and bee guide. Pollen, honey, and precise marks now have upright icon-topped posts grounded in the field, in addition to their area rings; posts expire with their marks.
+
+Walking now interpolates the player between simulation ticks and translates the camera with that same rendered position. Orbit and zoom ease independently, fixing the view vibration caused by easing the camera toward a target that snapped at 30 Hz. Teleports snap the presentation to the new position. Existing saves, bee abilities, item balances, and controls remain compatible.

@@ -1354,3 +1354,17 @@ h4 {
 .reference-ui .shop-price {
   word-break: normal;
 }
+.hud .buffs .ability-token-icon {
+  width: 25px;
+  height: 25px;
+  display: block;
+}
+.reference-ui .ability-list b {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.reference-ui .ability-list .ability-token-icon {
+  flex-shrink: 0;
+}

@@ -1,3 +1,4 @@
+import TokenIcon from "./TokenIcon";
 import { ABILITIES, beeAbilities, PASSIVES } from "../game/data/abilities";
 import type { BeeDefinition } from "../game/data/bees";
 import { giftedBonusLabel } from "../game/systems/gifted";
@@ -17,6 +18,7 @@ export default function BeeAbilities({
       {abilities.map((id) => (
         <div key={id}>
           <b style={{ color: ABILITIES[id].color }}>
+            <TokenIcon kind={id} size={26} />
             {ABILITIES[id].name}
             {ABILITIES[id].gifted ? " ★" : ""}
           </b>

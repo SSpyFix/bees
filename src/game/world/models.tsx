@@ -67,6 +67,7 @@ export function Label({
   color = "#fff5d5",
   background = "#315742",
   size = 0.85,
+  plain = false,
 }: {
   text: string;
   position: [number, number, number];
@@ -74,31 +75,48 @@ export function Label({
   color?: string;
   background?: string;
   size?: number;
+  plain?: boolean;
 }) {
   const map = useMemo(() => {
     const c = document.createElement("canvas");
-    c.width = 1024;
     c.height = 128;
     const x = c.getContext("2d")!;
-    x.fillStyle = background;
-    x.beginPath();
-    x.rect(2, 2, 1020, 124);
-    x.fill();
-    x.strokeStyle = color + "55";
-    x.lineWidth = 3;
-    x.stroke();
-    x.fillStyle = color;
-    x.font = "bold 49px Arial";
+    x.font = plain ? "bold 80px Arial" : "bold 49px Arial";
+    c.width = plain
+      ? Math.max(96, Math.ceil(x.measureText(text).width + 32))
+      : 1024;
+    x.font = plain ? "bold 80px Arial" : "bold 49px Arial";
+    if (!plain) {
+      x.fillStyle = background;
+      x.fillRect(2, 2, c.width - 4, 124);
+      x.strokeStyle = color + "55";
+      x.lineWidth = 3;
+      x.strokeRect(2, 2, c.width - 4, 124);
+    }
     x.textAlign = "center";
     x.textBaseline = "middle";
-    x.fillText(text, 512, 66, 970);
+    if (plain) {
+      x.strokeStyle = "#153528";
+      x.lineWidth = 7;
+      x.lineJoin = "round";
+      x.strokeText(text, c.width / 2, 66);
+    }
+    x.fillStyle = color;
+    x.fillText(text, c.width / 2, 66, plain ? c.width - 24 : 970);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
-  }, [text, color, background]);
+  }, [text, color, background, plain]);
   useEffect(() => () => map.dispose(), [map]);
   return (
-    <sprite position={position} scale={[width, size, 1]}>
+    <sprite
+      position={position}
+      scale={[
+        plain ? Math.min(width, (size * map.image.width) / 128) : width,
+        size,
+        1,
+      ]}
+    >
       <spriteMaterial map={map} transparent depthWrite={false} />
     </sprite>
   );
@@ -326,6 +344,7 @@ export function BeeModel({
           </mesh>
           <Label
             text="★"
+            plain
             position={[0, face === "buoyant" ? 2.85 : 1.85, 0]}
             size={0.65}
             width={1.4}
@@ -340,10 +359,6 @@ export function BeeModel({
         color={beeAppearance(face).stripe}
       />
       <mesh position={[0, 0, 0.632]}>
-        <planeGeometry args={[1.25, 1.25]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
-      </mesh>
-      <mesh position={[0, 0.642, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[1.25, 1.25]} />
         <meshBasicMaterial map={texture} toneMapped={false} />
       </mesh>

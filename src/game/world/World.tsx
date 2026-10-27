@@ -336,6 +336,7 @@ function Rewards() {
         <Label
           key={f.id}
           text={f.text}
+          plain
           position={[f.x, f.y + (1.6 - f.life) * 1.2, f.z]}
           width={5}
           size={0.65}

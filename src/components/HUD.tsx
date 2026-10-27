@@ -1,3 +1,4 @@
+import TokenIcon from "./TokenIcon";
 import { MenuIcon, ItemIcon } from "./GameIcons";
 import { ABILITIES } from "../game/data/abilities";
 import { useEffect, useState } from "react";
@@ -155,13 +156,7 @@ export default function HUD() {
             key={b.kind}
             title={`${ABILITIES[b.kind]?.name ?? b.kind}: ${Math.ceil(b.remaining)}s`}
           >
-            <b>
-              {(ABILITIES[b.kind]?.name ?? b.kind)
-                .split(/[ -]/)
-                .map((x) => x[0])
-                .join("")
-                .slice(0, 2)}
-            </b>
+            <TokenIcon kind={b.kind} size={26} />
             <span>×{Number(b.value.toFixed(2))}</span>
           </div>
         ))}

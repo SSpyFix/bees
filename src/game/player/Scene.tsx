@@ -36,6 +36,13 @@ function Controller() {
     pitch: 0.62,
     distance: 52,
     target: new THREE.Vector3(0, 2, 44),
+    previous: new THREE.Vector3(game.player.x, game.player.y, game.player.z),
+    rendered: new THREE.Vector3(game.player.x, game.player.y, game.player.z),
+    orbit: new THREE.Vector3(
+      Math.sin(0.38) * Math.cos(0.62) * 52,
+      Math.sin(0.62) * 52,
+      Math.cos(0.38) * Math.cos(0.62) * 52,
+    ),
     tick: 0,
     ui: 0,
     save: 0,
@@ -216,6 +223,7 @@ function Controller() {
       i.tick += dt;
       let ticks = 0;
       while (i.tick >= 1 / 30 && ticks++ < 8) {
+        i.previous.set(game.player.x, game.player.y, game.player.z);
         const f =
           Number(i.keys.has("KeyW") || i.keys.has("ArrowUp")) -
           Number(i.keys.has("KeyS") || i.keys.has("ArrowDown"));
@@ -239,12 +247,22 @@ function Controller() {
         i.tick -= 1 / 30;
       }
     }
+    const current = new THREE.Vector3(
+      game.player.x,
+      game.player.y,
+      game.player.z,
+    );
+    // Interpolate the two fixed simulation poses, including frames with no physics tick.
+    // Teleports snap both poses together instead of sweeping through terrain.
+    if (i.previous.distanceToSquared(current) > 64) i.previous.copy(current);
+    const alpha = THREE.MathUtils.clamp(i.tick / (1 / 30), 0, 1);
+    i.rendered.copy(i.previous).lerp(current, alpha);
     if (body.current) {
-      body.current.position.set(game.player.x, game.player.y, game.player.z);
+      body.current.position.copy(i.rendered);
       body.current.rotation.y = game.player.yaw;
     }
-    // Aim at the keeper's torso every frame, including during jumps and teleports.
-    i.target.set(game.player.x, game.player.y + 1.8, game.player.z);
+    i.target.copy(i.rendered);
+    i.target.y += 1.8;
     let dist = i.distance;
     // Sample the camera ray against the same terrain used by player collision.
     for (let t = 2; t < i.distance; t += 2) {
@@ -262,7 +280,10 @@ function Controller() {
       i.target.y + Math.sin(i.pitch) * dist,
       i.target.z + Math.cos(i.yaw) * Math.cos(i.pitch) * dist,
     );
-    camera.position.lerp(desired, 1 - Math.exp(-dt * 7));
+    // Smooth orbit/zoom independently; translate with the same pose the player uses.
+    // Easing an absolute camera while snapping its aim to physics caused walking jitter.
+    i.orbit.lerp(desired.sub(i.target), 1 - Math.exp(-dt * 7));
+    camera.position.copy(i.target).add(i.orbit);
     camera.lookAt(i.target);
     i.ui += dt;
     i.save += dt;
@@ -276,7 +297,7 @@ function Controller() {
     }
   });
   return (
-    <group ref={body}>
+    <group ref={body} name="player">
       <KeeperModel
         moving={game.player.moving}
         swing={game.player.swing}

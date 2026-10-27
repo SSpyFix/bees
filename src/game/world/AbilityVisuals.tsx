@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
-import { ABILITIES } from "../data/abilities";
+import TokenIconMesh from "./TokenIconMesh";
+import { surface } from "./terrain";
 import type { AbilityEffect, Token } from "../systems/types";
 import { Box, Ball, Label, BeeModel } from "./models";
 export function TokenVisual({
@@ -10,35 +11,13 @@ export function TokenVisual({
   token: Token;
   clock: number;
 }) {
-  const definition = ABILITIES[t.kind];
-  const color =
-    definition?.color ??
-    (t.kind === "honey"
-      ? "#ffdc55"
-      : t.kind === "ticket"
-        ? "#fff0ba"
-        : "#dfb884");
   return (
-    <group position={[t.x, t.y + Math.sin(clock * 3 + t.id) * 0.15, t.z]}>
-      <mesh rotation={[Math.PI / 2, 0, clock]}>
-        <cylinderGeometry args={[0.65, 0.65, 0.16, 12]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={0.15}
-        />
-      </mesh>
-      <Label
-        text={definition?.name ?? t.kind}
-        position={[0, 0.75, 0]}
-        width={3}
-        size={0.32}
-        color={color}
-        background="#303a30"
-      />
+    <group position={[t.x, t.y + Math.sin(clock * 3 + t.id) * 0.12, t.z]}>
+      <TokenIconMesh kind={t.kind} />
     </group>
   );
 }
+
 export default function AbilityVisual({
   effect: e,
   clock,
@@ -68,7 +47,14 @@ export default function AbilityVisual({
             ? "#65cfff"
             : "#fff4ae";
   return (
-    <group position={[e.x, e.y + 0.12, e.z]}>
+    <group
+      position={[
+        e.x,
+        mark ? (surface(e.x, e.z) ?? e.y) + 0.055 : e.y + 0.12,
+        e.z,
+      ]}
+    >
+      {mark && <MarkPost kind={e.kind} plus={e.radius > 5.5} />}
       {(mark ||
         [
           "blast",
@@ -113,6 +99,7 @@ export default function AbilityVisual({
           <Box position={[0, -2, 0]} scale={[0.04, 2, 0.04]} color="#faf1bc" />
           <Label
             text={`${e.gifted ? "★ " : ""}${Math.floor(e.stored).toLocaleString()} pollen`}
+            plain
             position={[0, 2.3, 0]}
             width={5}
             size={0.4}
@@ -223,12 +210,29 @@ export default function AbilityVisual({
       {e.kind === "target" && (
         <Label
           text="◎"
+          plain
           position={[0, 0.7, 0]}
           width={2}
           size={1.2}
           color="#ff6b52"
         />
       )}
+    </group>
+  );
+}
+
+function MarkPost({ kind, plus }: { kind: string; plus: boolean }) {
+  const icon = plus && kind !== "precise-mark" ? kind + "-plus" : kind;
+  return (
+    <group>
+      <mesh name="mark-post" position={[0, 1.25, 0]}>
+        <cylinderGeometry args={[0.065, 0.085, 2.5, 8]} />
+        <meshStandardMaterial color="#6c5132" />
+      </mesh>
+      <Box position={[0, 0.1, 0]} scale={[0.4, 0.2, 0.4]} color="#a48d51" />
+      <group position={[0, 2.65, 0]}>
+        <TokenIconMesh kind={icon} radius={0.55} />
+      </group>
     </group>
   );
 }

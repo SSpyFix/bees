@@ -504,8 +504,6 @@ export function collectToken(s: Game, id: number) {
       awardHoney(s, (25 + 10 * t.value) * hiveBonus(s, "honey-token"));
     }
   } else activateAbility(s, t.kind, t, t.value, t.gifted ?? false);
-  const name = ABILITIES[t.kind]?.name;
-  if (name) floating(s, t.x, t.y + 1, t.z, name, ABILITIES[t.kind].color);
 }
 export function spawnBeeAbilities(
   s: Game,
