@@ -3,7 +3,6 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import ToolModel from "../player/ToolModel";
 import PackModel from "../player/PackModel";
-import BeeDecorations from "../bees/BeeDecorations";
 import { beeAppearance } from "../bees/appearance";
 import { beeFaceSvg } from "../bees/faces";
 export const palette = {
@@ -345,7 +344,7 @@ export function BeeModel({
           <Label
             text="★"
             plain
-            position={[0, face === "buoyant" ? 2.85 : 1.85, 0]}
+            position={[0, 1.85, 0]}
             size={0.65}
             width={1.4}
             color="#ffdc35"
@@ -375,7 +374,6 @@ export function BeeModel({
           </mesh>
         ))}
       </group>
-      <BeeDecorations face={face} />
       {rarity === "Mythic" && (
         <Box
           position={[0, -0.66, 0]}

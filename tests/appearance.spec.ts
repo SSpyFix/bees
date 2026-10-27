@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-test("renders every reference face and species decoration without WebGL errors", async ({
+test("renders every reference face without WebGL errors", async ({
   page,
 }) => {
   const errors: string[] = [];
