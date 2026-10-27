@@ -233,12 +233,12 @@ function Controller() {
       body.current.position.set(game.player.x, game.player.y, game.player.z);
       body.current.rotation.y = game.player.yaw;
     }
-    const aim = new THREE.Vector3(
+    // Aim at the keeper's torso every frame, including during jumps and teleports.
+    i.target.set(
       game.player.x,
       game.player.y + 1.8,
-      game.player.z - 8,
+      game.player.z,
     );
-    i.target.lerp(aim, 1 - Math.exp(-dt * 5));
     let dist = i.distance;
     // Sample the camera ray against the same terrain used by player collision.
     for (let t = 2; t < i.distance; t += 2) {
