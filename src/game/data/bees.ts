@@ -1,3 +1,4 @@
+import { beeAppearance } from "../bees/appearance";
 export type BeeDefinition = {
   id: string;
   name: string;
@@ -110,7 +111,7 @@ export const BEES: BeeDefinition[] = rows.map(
     face: name.toLowerCase(),
     rarity,
     color,
-    body,
+    body: beeAppearance(name.toLowerCase()).body,
     gather,
     interval,
     speed,

@@ -3,6 +3,8 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import ToolModel from "../player/ToolModel";
 import PackModel from "../player/PackModel";
+import BeeDecorations from "../bees/BeeDecorations";
+import { beeAppearance } from "../bees/appearance";
 import { beeFaceSvg } from "../bees/faces";
 export const palette = {
   grass: "#65c411",
@@ -315,7 +317,7 @@ export function BeeModel({
       );
   });
   return (
-    <group scale={0.8}>
+    <group scale={face === "tadpole" || face === "baby" ? 0.68 : 0.8}>
       {gifted && (
         <>
           <mesh position={[0, 1.15, 0]} rotation={[Math.PI / 2, 0, 0]}>
@@ -324,7 +326,7 @@ export function BeeModel({
           </mesh>
           <Label
             text="★"
-            position={[0, 1.85, 0]}
+            position={[0, face === "buoyant" ? 2.85 : 1.85, 0]}
             size={0.65}
             width={1.4}
             color="#ffdc35"
@@ -332,8 +334,16 @@ export function BeeModel({
         </>
       )}
       <Box scale={[1.25, 1.25, 1.25]} color={color} />
-      <Box position={[0, 0, -0.3]} scale={[1.27, 1.27, 0.2]} color="#252525" />
+      <Box
+        position={[0, 0, -0.3]}
+        scale={[1.27, 1.27, 0.2]}
+        color={beeAppearance(face).stripe}
+      />
       <mesh position={[0, 0, 0.632]}>
+        <planeGeometry args={[1.25, 1.25]} />
+        <meshBasicMaterial map={texture} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 0.642, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[1.25, 1.25]} />
         <meshBasicMaterial map={texture} toneMapped={false} />
       </mesh>
@@ -350,28 +360,7 @@ export function BeeModel({
           </mesh>
         ))}
       </group>
-      {["demon", "vicious"].includes(face) &&
-        [-0.4, 0, 0.4].map((x) => (
-          <mesh key={x} position={[x, 0.8, 0]}>
-            <coneGeometry args={[0.16, 0.5, 4]} />
-            <meshStandardMaterial color="#1b2330" />
-          </mesh>
-        ))}
-      {face === "bear" &&
-        [-0.52, 0.52].map((x) => (
-          <Ball
-            key={x}
-            position={[x, 0.6, 0]}
-            scale={[0.25, 0.25, 0.2]}
-            color="#725030"
-          />
-        ))}
-      {face === "buoyant" && (
-        <mesh position={[0, 1.5, 0]}>
-          <sphereGeometry args={[0.6, 8, 6]} />
-          <meshStandardMaterial color="#5379ce" />
-        </mesh>
-      )}
+      <BeeDecorations face={face} />
       {rarity === "Mythic" && (
         <Box
           position={[0, -0.66, 0]}
