@@ -277,11 +277,13 @@ export function BeeModel({
   rarity = "Common",
   face = "basic",
   animate = true,
+  gifted = false,
 }: {
   color?: string;
   rarity?: string;
   face?: string;
   animate?: boolean;
+  gifted?: boolean;
 }) {
   const wings = useRef<THREE.Group>(null);
   const texture = useMemo(() => {
@@ -314,6 +316,21 @@ export function BeeModel({
   });
   return (
     <group scale={0.8}>
+      {gifted && (
+        <>
+          <mesh position={[0, 1.15, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.85, 0.075, 6, 20]} />
+            <meshBasicMaterial color="#ffdf30" />
+          </mesh>
+          <Label
+            text="★"
+            position={[0, 1.85, 0]}
+            size={0.65}
+            width={1.4}
+            color="#ffdc35"
+          />
+        </>
+      )}
       <Box scale={[1.25, 1.25, 1.25]} color={color} />
       <Box position={[0, 0, -0.3]} scale={[1.27, 1.27, 0.2]} color="#252525" />
       <mesh position={[0, 0, 0.632]}>

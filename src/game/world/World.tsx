@@ -1,3 +1,4 @@
+import AbilityVisual, { TokenVisual } from "./AbilityVisuals";
 import EnemyModel from "../combat/EnemyModel";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -203,7 +204,7 @@ function Flowers() {
     for (let i = 0; i < game.flowers.length; i++) {
       const f = game.flowers[i],
         full = 0.35 + (0.65 * f.pollen) / f.max,
-        scale = (0.7 + f.size * 0.15) * full;
+        scale = (0.7 + f.size * 0.15) * full * (f.pollination > 0 ? 1.3 : 1);
       dummy.position.set(f.x, f.y + 0.48 * full + 0.06, f.z);
       dummy.rotation.set(0, f.id * 2.399, 0);
       dummy.scale.set(scale, scale, scale);
@@ -271,6 +272,7 @@ function BeeActor({ id }: { id: string }) {
       <BeeModel
         color={definition.body}
         rarity={definition.rarity}
+        gifted={bee?.gifted}
         face={definition.face}
       />
     </group>
@@ -325,32 +327,10 @@ function Rewards() {
   return (
     <>
       {s.tokens.map((t) => (
-        <group
-          key={t.id}
-          position={[t.x, t.y + 0.25 + Math.sin(s.clock * 3 + t.id) * 0.2, t.z]}
-          rotation={[0, s.clock, Math.PI / 2]}
-        >
-          <mesh>
-            {t.kind === "ticket" ? (
-              <boxGeometry args={[1.1, 0.16, 0.7]} />
-            ) : (
-              <cylinderGeometry args={[0.6, 0.6, 0.16, 6]} />
-            )}
-            <meshStandardMaterial
-              color={
-                t.kind === "honey"
-                  ? "#f3c651"
-                  : t.kind === "blue"
-                    ? "#89bdd7"
-                    : t.kind === "red"
-                      ? "#e99480"
-                      : "#d4e296"
-              }
-              emissive="#ac8e45"
-              emissiveIntensity={0.15}
-            />
-          </mesh>
-        </group>
+        <TokenVisual key={t.id} token={t} clock={s.clock} />
+      ))}
+      {s.effects.map((e) => (
+        <AbilityVisual key={e.id} effect={e} clock={s.clock} />
       ))}
       {s.floaters.map((f) => (
         <Label

@@ -378,6 +378,7 @@ export function ReferenceHives() {
                         color={def.body}
                         face={def.face}
                         rarity={def.rarity}
+                        gifted={b?.gifted}
                         animate={false}
                       />
                     </group>

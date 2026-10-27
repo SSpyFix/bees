@@ -1,3 +1,5 @@
+import { MenuIcon, ItemIcon } from "./GameIcons";
+import { ABILITIES } from "../game/data/abilities";
 import { useEffect, useState } from "react";
 import { useGame, sound } from "../game/systems/store";
 import {
@@ -17,7 +19,7 @@ import { BeeIcon, GearArt, HoneyIcon } from "./Icons";
 import { MountainMap, number } from "./Menus";
 import type { Menu } from "../game/systems/store";
 export default function HUD() {
-  const { game: s, menu, open, revision, saveStatus } = useGame();
+  const { game: s, menu, open, revision, saveStatus, shopContext } = useGame();
   void revision;
   const field = currentField(s),
     near = nearestPlace(s),
@@ -108,24 +110,20 @@ export default function HUD() {
     },
   ];
   return (
-    <div className={`hud ${menu ? "menu-is-open" : ""}`}>
+    <div
+      className={`hud ${menu ? "menu-is-open" : ""} ${shopContext ? "in-shop" : ""}`}
+    >
+      <h1 className="sr-only">Bee Swarm Simulator</h1>
       <header className="top-hud">
-        <div className="brand">
-          <BeeIcon size={30} />
-          <div>
-            <h1>Bee Swarm Simulator</h1>
-            <small>Browser recreation</small>
-          </div>
-        </div>
         <div className="resource-bar">
           <div className="resource honey">
-            <HoneyIcon />
-            <div>
-              <span>Honey</span>
-              <strong data-testid="honey">{number(s.honey)}</strong>
-            </div>
+            <span className="resource-name">Honey</span>
+            <strong data-testid="honey">
+              {Math.floor(s.honey).toLocaleString()}
+            </strong>
           </div>
           <div className="resource pollen">
+            <span className="resource-name">Pollen</span>
             <div className="capacity-track">
               <i
                 style={{
@@ -133,103 +131,77 @@ export default function HUD() {
                 }}
               />
             </div>
-            <div className="pollen-content">
-              <span>Pollen</span>
-              <b>
-                <span data-testid="pollen">{number(s.pollen)}</span> /{" "}
-                {number(s.capacity)}
-              </b>
-            </div>
+            <b>
+              <span data-testid="pollen">
+                {Math.floor(s.pollen).toLocaleString()}
+              </span>
+              /{Math.floor(s.capacity).toLocaleString()}
+            </b>
           </div>
         </div>
-        <div className="top-actions">
-          <button
-            className="swarm-button"
-            onClick={() => open("hive")}
-            aria-label="Open hive"
-          >
-            <BeeIcon size={26} />
-            <b data-testid="bee-count">{s.bees.length}</b>
-          </button>
-          <button
-            className="round-button"
-            aria-label="Open settings"
-            onClick={() => open("settings")}
-          >
-            ⚙
-          </button>
-        </div>
       </header>
+      <div className="system-buttons">
+        <button aria-label="Open hive" onClick={() => open("hive")}>
+          <BeeIcon size={22} />
+          <b data-testid="bee-count">{s.bees.length}</b>
+        </button>
+        <button aria-label="Open settings" onClick={() => open("settings")}>
+          ☰
+        </button>
+      </div>
+      <div className="buffs">
+        {s.buffs.map((b) => (
+          <div
+            key={b.kind}
+            title={`${ABILITIES[b.kind]?.name ?? b.kind}: ${Math.ceil(b.remaining)}s`}
+          >
+            <b>
+              {(ABILITIES[b.kind]?.name ?? b.kind)
+                .split(/[ -]/)
+                .map((x) => x[0])
+                .join("")
+                .slice(0, 2)}
+            </b>
+            <span>×{Number(b.value.toFixed(2))}</span>
+          </div>
+        ))}
+      </div>
       <nav className="side-toolbar" aria-label="Game menus">
         {[
-          { menu: "inventory", icon: "▣", label: "Inventory", key: "TAB" },
-          { menu: "quests", icon: "!", label: "Quests", key: "Q" },
-          { menu: "bees", icon: "bee", label: "Bees", key: "B" },
-          { menu: "hive", icon: "⬡", label: "Hive", key: "H" },
-          { menu: "map", icon: "⌁", label: "Map", key: "M" },
-          { menu: "settings", icon: "⚙", label: "Settings", key: "ESC" },
+          { menu: "inventory", label: "Inventory", icon: "inventory" },
+          { menu: "quests", label: "Quests", icon: "quests" },
+          { menu: "bees", label: "Bees", icon: "bees" },
+          { menu: "hive", label: "Hive", icon: "hive" },
+          { menu: "settings", label: "Settings", icon: "settings" },
+          { menu: "map", label: "Map", icon: "map" },
         ].map((t) => (
           <button
             key={t.menu}
-            onClick={() => open(t.menu as Menu)}
-            title={`${t.label} (${t.key})`}
+            title={t.label}
             aria-label={`Show ${t.label.toLowerCase()}`}
+            className={menu === t.menu ? "active" : ""}
+            onClick={() => open(menu === t.menu ? null : (t.menu as Menu))}
           >
-            <span>{t.icon === "bee" ? <BeeIcon size={32} /> : t.icon}</span>
-            <small>{t.label}</small>
+            <MenuIcon kind={t.icon} />
           </button>
         ))}
+        <button
+          title="Nearby shop"
+          aria-label="Open nearby shop"
+          onClick={() => {
+            if (near && ["shop", "eggs", "tickets"].includes(near.kind))
+              interact();
+            else
+              perform(() => {
+                s.notification =
+                  "Walk to a shop and press E to browse its items.";
+                s.noticeId++;
+              });
+          }}
+        >
+          <MenuIcon kind="shop" />
+        </button>
       </nav>
-      <aside className="quest-tracker">
-        <h2>
-          Quests{" "}
-          <button
-            onClick={() => open("quests")}
-            aria-label="Open quest journal"
-          >
-            +
-          </button>
-        </h2>
-        {Object.entries(s.accepted).length ? (
-          Object.entries(s.accepted)
-            .slice(0, 3)
-            .map(([id, progress]) => {
-              const q = QUESTS.find((q) => q.id === id)!;
-              return (
-                <button
-                  key={id}
-                  className="tracked-quest"
-                  onClick={() => open("quests")}
-                >
-                  <b>
-                    {PLACES.find((p) => p.id === q.npc)?.name}: {q.name}
-                  </b>
-                  {q.objectives.map((o, i) => (
-                    <div key={i}>
-                      <span>
-                        {o.label}: {number(progress[i])}/{number(o.amount)}
-                      </span>
-                      <div className="progress">
-                        <i
-                          style={{
-                            width: `${(progress[i] / o.amount) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </button>
-              );
-            })
-        ) : (
-          <p>
-            Talk to Black Bear near Dandelion Field to get your first quest.
-            <br />
-            <br />
-            Collect pollen, make honey, and grow your swarm.
-          </p>
-        )}
-      </aside>
       <aside className="right-hud">
         <div className="field-location" data-testid="scene-status">
           {field?.name ?? "Hive Grounds"}
@@ -250,16 +222,6 @@ export default function HUD() {
         </div>
         <small className="save-label">{saveStatus || "Autosave enabled"}</small>
       </aside>
-      <div className="buffs">
-        {s.buffs.map((b) => (
-          <div key={b.kind}>
-            <b>
-              {b.kind} ×{b.value}
-            </b>
-            <span>{Math.ceil(b.remaining)}s</span>
-          </div>
-        ))}
-      </div>
       {s.challenge && (
         <div className="challenge-banner">
           Clover Challenge: {number(s.challenge.gathered)} /{" "}
@@ -279,16 +241,14 @@ export default function HUD() {
               })
             }
           >
-            <kbd>F</kbd> Stop Making Honey
+            <kbd>F</kbd>Stop Making Honey
           </button>
         ) : near ? (
           <button className="interaction" onClick={interact}>
             <kbd>E</kbd>
             {near.kind === "npc"
               ? `Talk to ${near.name}`
-              : near.kind === "shop" ||
-                  near.kind === "eggs" ||
-                  near.kind === "tickets"
+              : ["shop", "eggs", "tickets"].includes(near.kind)
                 ? `Open ${near.name}`
                 : near.name}
           </button>
@@ -300,7 +260,7 @@ export default function HUD() {
           <>
             <button
               className="interaction"
-              disabled={s.pollen <= 0}
+              disabled={s.pollen <= 0 && s.balloonPollen <= 0}
               onClick={() => perform(() => startConversion(s))}
             >
               <kbd>F</kbd>Make Honey
@@ -312,45 +272,49 @@ export default function HUD() {
         ) : null}
       </div>
       <footer className="bottom-hud">
-        <div className="control-hints">
-          WASD · Move &nbsp; Space · Jump &nbsp; Hold click · Collect
-          <br />
-          Right-drag · Camera &nbsp; Scroll · Zoom
-        </div>
         <nav className="hotbar" aria-label="Item hotbar">
           {slots.map((slot, i) => (
             <button
-              className={i === 0 ? "selected-tool" : ""}
               key={slot.key}
-              onClick={slot.fn}
-              title={slot.label}
               aria-label={slot.label}
+              title={slot.label}
+              onClick={slot.fn}
+              className={i === 0 ? "selected-tool" : ""}
             >
               <span className="hotkey">{slot.key}</span>
-              <GearArt type={slot.type} level={slot.level} />
-              {slot.count !== undefined && (
-                <b className="item-count">{slot.count}</b>
+              {i === 0 ? (
+                <GearArt type="tool" level={slot.level} />
+              ) : (
+                <ItemIcon
+                  id={
+                    ["tool", "egg", "booster", "converter", "treat", "jelly"][i]
+                  }
+                />
               )}
+              <b className="item-count">
+                {slot.count === undefined ? "" : number(slot.count)}
+              </b>
             </button>
           ))}
           {[
-            { key: "7", label: "Inventory", icon: "▣", menu: "inventory" },
-            { key: "8", label: "Hive", icon: "⬡", menu: "hive" },
-            { key: "9", label: "Bees", icon: "bee", menu: "bees" },
-            { key: "0", label: "Map", icon: "⌁", menu: "map" },
+            {
+              key: "7",
+              label: "Inventory",
+              icon: "inventory",
+              menu: "inventory",
+            },
+            { key: "8", label: "Hive", icon: "hive", menu: "hive" },
+            { key: "9", label: "Bees", icon: "bees", menu: "bees" },
+            { key: "0", label: "Map", icon: "map", menu: "map" },
           ].map((t) => (
             <button
               key={t.key}
-              onClick={() => open(t.menu as Menu)}
-              title={t.label}
               aria-label={t.label}
+              title={t.label}
+              onClick={() => open(t.menu as Menu)}
             >
               <span className="hotkey">{t.key}</span>
-              {t.icon === "bee" ? (
-                <BeeIcon size={32} />
-              ) : (
-                <span className="hotbar-icon">{t.icon}</span>
-              )}
+              <MenuIcon kind={t.icon} />
             </button>
           ))}
         </nav>

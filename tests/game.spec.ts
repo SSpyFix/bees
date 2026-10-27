@@ -135,6 +135,7 @@ test("plays the actual gather → quest → convert → purchase → hatch → s
   await expect(
     page.getByRole("heading", { name: "Basic Shop", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "View Rake", exact: true }).click();
   const rake = page.locator(".item-card").filter({
     has: page.getByRole("heading", { name: "Rake", exact: true }),
   });
@@ -181,13 +182,14 @@ test("shop refuses poor purchases and gates physically block an undersized swarm
   await move(page, "a", "x", -47, true);
   await move(page, "s", "z", 51, false);
   await page.keyboard.press("e");
+  await page.getByRole("button", { name: "View Rake", exact: true }).click();
   const rake = page.locator(".item-card").filter({
     has: page.getByRole("heading", { name: "Rake", exact: true }),
   });
   await expect(rake.getByRole("button")).toBeDisabled();
   await page.keyboard.press("Escape");
   await move(page, "w", "z", 48, true);
-  await move(page, "d", "x", -13, false);
+  await move(page, "d", "x", -9, false);
   await move(page, "w", "z", -17, true);
   await page.keyboard.down("w");
   await page.waitForTimeout(2500);
@@ -383,11 +385,9 @@ test("Blue HQ opens a real color-specific equipment shop and equips its purchase
   await expect(
     page.getByRole("heading", { name: "Blue HQ", exact: true }),
   ).toBeVisible();
-  const wand = page
-    .locator(".item-card")
-    .filter({
-      has: page.getByRole("heading", { name: "Bubble Wand", exact: true }),
-    });
+  const wand = page.locator(".item-card").filter({
+    has: page.getByRole("heading", { name: "Bubble Wand", exact: true }),
+  });
   await wand.getByRole("button").click();
   await expect(wand.getByRole("button")).toHaveText("✓ Equipped");
   const saved = await page.evaluate(

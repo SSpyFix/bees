@@ -5,6 +5,7 @@ import World from "../world/World";
 import { KeeperModel } from "../world/models";
 import { useGame, sound } from "../systems/store";
 import {
+  updateAutoJelly,
   atHive,
   nearbyHive,
   claimHive,
@@ -66,6 +67,11 @@ function Controller() {
         return;
       }
       if (e.repeat) return;
+      if (e.code === "KeyE" && state.shopContext) {
+        state.leaveShop();
+        clear();
+        return;
+      }
       if (
         e.code === "KeyQ" ||
         e.code === "Tab" ||
@@ -197,6 +203,10 @@ function Controller() {
     const state = useGame.getState(),
       i = input.current;
     const dt = Math.min(frameDt, 0.25);
+    if (game.jellyRun?.running) {
+      updateAutoJelly(game, 10000);
+      if (!game.jellyRun.running) state.save();
+    }
     const paused = state.menu === "settings";
     if (state.menu) {
       i.keys.clear();
@@ -234,11 +244,7 @@ function Controller() {
       body.current.rotation.y = game.player.yaw;
     }
     // Aim at the keeper's torso every frame, including during jumps and teleports.
-    i.target.set(
-      game.player.x,
-      game.player.y + 1.8,
-      game.player.z,
-    );
+    i.target.set(game.player.x, game.player.y + 1.8, game.player.z);
     let dist = i.distance;
     // Sample the camera ray against the same terrain used by player collision.
     for (let t = 2; t < i.distance; t += 2) {

@@ -8,6 +8,8 @@ export type Flower = Vec & {
   max: number;
   regen: number;
   multiplier: number;
+  pollination: number;
+  goo: number;
 };
 export type BeeState =
   | "following"
@@ -21,6 +23,7 @@ export type BeeState =
 export type Bee = Vec & {
   id: string;
   kind: string;
+  gifted: boolean;
   level: number;
   bond: number;
   energy: number;
@@ -48,6 +51,20 @@ export type Token = Vec & {
   kind: string;
   value: number;
   life: number;
+  gifted?: boolean;
+  source?: string;
+};
+export type AbilityEffect = Vec & {
+  id: number;
+  kind: string;
+  life: number;
+  radius: number;
+  level: number;
+  gifted: boolean;
+  tick: number;
+  stored: number;
+  group?: number;
+  points?: { x: number; z: number }[];
 };
 export type Buff = { kind: string; remaining: number; value: number };
 export type Floater = Vec & {
@@ -82,6 +99,9 @@ export type Game = {
   enemies: Enemy[];
   tokens: Token[];
   buffs: Buff[];
+  effects: AbilityEffect[];
+  beeProgress: { tabbyLove: number; fetch: number };
+  balloonPollen: number;
   floaters: Floater[];
   inventory: Record<string, number>;
   accepted: Record<string, number[]>;
@@ -96,6 +116,7 @@ export type Game = {
     hatches: number;
     levels: number;
     time: number;
+    jellyRolls: number;
   };
   flight: { from: Vec; to: Vec; elapsed: number; duration: number } | null;
   converting: boolean;
@@ -108,10 +129,19 @@ export type Game = {
   noticeId: number;
   cooldowns: Record<string, number>;
   challenge: { remaining: number; gathered: number; target: number } | null;
+  jellyRun: {
+    beeId: string;
+    used: number;
+    running: boolean;
+    rarity: "Any" | "Legendary" | "Mythic";
+    gifted: boolean;
+  } | null;
   settings: {
     volume: number;
     muted: boolean;
     sensitivity: number;
     quality: "high" | "low";
+    jellyRarity: "Any" | "Legendary" | "Mythic";
+    jellyGifted: boolean;
   };
 };

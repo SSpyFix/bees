@@ -2036,3 +2036,100 @@ h3 {
 .bee-index .bee-detail > .bee-face {
   margin: 0 auto 15px;
 }
+
+.bulk-purchase,
+.auto-jelly {
+  padding: 16px;
+  margin: 14px 0;
+  border: 1px solid #d9be67;
+  border-radius: 10px;
+  background: #fff9dd;
+  color: #433c25;
+}
+.bulk-purchase label {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-weight: 700;
+  flex-wrap: wrap;
+}
+.bulk-purchase select,
+.auto-jelly select {
+  max-width: 100%;
+  padding: 9px;
+  border-radius: 6px;
+  border: 1px solid #a8924e;
+  background: #fff;
+  color: #302b1e;
+}
+.bulk-purchase small,
+.auto-jelly small {
+  display: block;
+  line-height: 1.5;
+  margin-top: 8px;
+  color: #645b43;
+}
+.auto-jelly h3 {
+  margin: 0 0 12px;
+}
+.auto-jelly .settings-grid {
+  margin: 0;
+  grid-template-columns: 1fr;
+}
+.auto-jelly label {
+  gap: 12px;
+}
+.auto-jelly p {
+  font-weight: 700;
+  margin: 10px 0;
+}
+.jelly-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+}
+.jelly-progress span {
+  font-variant-numeric: tabular-nums;
+}
+.ability-list {
+  margin-top: 16px;
+  text-align: left;
+}
+.ability-list > div {
+  padding: 9px 11px;
+  background: #3d4638;
+  border-radius: 6px;
+  margin: 6px 0;
+}
+.ability-list b {
+  display: block;
+  font-size: 13px;
+}
+.ability-list small {
+  display: block;
+  font-size: 11px;
+  color: #fff9e7;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.ability-list > p {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.gifted-bonus {
+  padding: 10px;
+  background: #fff0ad;
+  color: #534219;
+  border-radius: 6px;
+}
+.hex.gifted {
+  filter: drop-shadow(0 0 4px #ffde32);
+  outline: 2px solid #ffde32;
+}
+.bee-detail .stat-table b {
+  overflow-wrap: anywhere;
+}
+.bee-index .bee-detail {
+  max-height: calc(100vh - 220px);
+}
