@@ -1,3 +1,4 @@
+import { HIVE_SLOT_PRICES, MAX_HIVE_SLOTS } from "../data/hive-slots";
 import { hiveModifiers, effectiveCapacity, updateCapacity } from "./modifiers";
 import { followBee } from './bee-follow';
 import { BADGES, RECIPES, SPRINKLERS } from "../data/support";
@@ -577,7 +578,7 @@ export function eggCost(s: Game) {
   return Math.min(10000000, Math.round(cost));
 }
 export function slotCost(s: Game) {
-  return Math.floor(3000000 * 1.5 ** (s.slots - 25));
+  return HIVE_SLOT_PRICES[s.slots - 25] ?? Infinity;
 }
 export function jellyCost(s: Game) {
   return Math.min(1000000, 250000 + s.jelliesPurchased * 10000);
@@ -672,11 +673,16 @@ export function buy(s: Game, id: string, quantity = 1) {
 }
 
 export function buySlot(s: Game) {
+  const shop=PLACES.find(p=>p.id==='shop-25')!;
+  if(s.bees.length<25 || distance(s.player,shop)>7 || Math.abs(s.player.y-shop.y)>2.5) {
+    notify(s,'Visit the Mountain Top Shop with at least 25 bees to buy hive slots.');
+    return false;
+  }
   const cost = slotCost(s);
-  if (s.slots >= 50 || s.honey < cost) {
+  if (s.slots >= MAX_HIVE_SLOTS || s.honey < cost) {
     notify(
       s,
-      s.slots >= 50
+      s.slots >= MAX_HIVE_SLOTS
         ? "Your hive is fully expanded."
         : "You need more honey for a hive slot.",
     );

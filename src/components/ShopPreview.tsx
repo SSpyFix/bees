@@ -15,6 +15,13 @@ export default function ShopPreview({
   id: string;
   bee?: { body: string; face: string; rarity: string };
 }) {
+  if(id==='hive-slot')return <div className="shop-item-illustration">
+    <svg viewBox="0 0 160 160" role="img" aria-label="Empty hive slot">
+      <polygon points="80,8 143,44 143,116 80,152 17,116 17,44" fill="#e9b52a" stroke="#674b0e" strokeWidth="5" />
+      <polygon points="80,27 127,54 127,106 80,133 33,106 33,54" fill="#fff3a4" />
+      <path d="M60 80H100M80 60V100" stroke="#89651c" strokeWidth="10" />
+    </svg>
+  </div>;
   if (["treat", "jelly", "booster", "converter", "starTreat"].includes(id))
     return (
       <div className="shop-item-illustration">

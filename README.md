@@ -87,3 +87,9 @@ WASD/arrows and jumping work while menus are open, including Settings. Typing in
 Idle bees choose independent nearby destinations with varied heights, brief pauses and local spacing. Walking draws the swarm into a loose trailing cluster; distant bees catch up, and teleports regroup them. Gathering, combat and hive resting still take priority. Rendered flight and turns ease between simulation updates.
 
 Visual reference: [original-game field screenshots](https://thenerdstash.com/7-must-know-tips-to-grow-your-hive-fast-in-roblox-bee-swarm-simulator/). The browser simulation uses its own movement model.
+
+## Hive slot purchases
+
+Hives begin with 25 slots. At the Mountain Top Shop, select **Hive Slot** to buy one additional empty slot, up to 50. The first costs 3,000,000 honey, the second 7,750,000; later purchases use the published individual BSS prices. Buying capacity does not hatch a bee. Slot purchases require being at the shop with at least 25 bees. Existing purchased capacity is retained.
+
+Price reference: [BSS hive slot table, slots 26–50](https://mobilematters.gg/roblox/get-more-bee-slots-bee-swarm-simulator).

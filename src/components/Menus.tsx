@@ -30,7 +30,6 @@ import {
   atHive,
   releaseBee,
   beeDefinition,
-  buySlot,
   claimQuest,
   feed,
   giftBee,
@@ -38,7 +37,6 @@ import {
   questReady,
   replayQuest,
   reroll,
-  slotCost,
 } from "../game/systems/simulation";
 import { BeeIcon } from "./Icons";
 export const number = (n: number) =>
@@ -170,13 +168,7 @@ function Hive() {
         <button className="button small secondary" disabled={!(s.inventory[egg] > 0)} onClick={()=>requestBeeItem(egg,b.id)}>
           Use egg on selected bee
         </button>
-        <button
-          className="button small secondary"
-          disabled={s.honey < slotCost(s) || s.slots >= 50}
-          onClick={() => action(() => buySlot(s))}
-        >
-          + Hive slot · ✦ {number(slotCost(s))}
-        </button>
+        <span className="subtle">Buy additional hive slots at the Mountain Top Shop.</span>
       </div>
       <div className="hive-layout">
         <div className="honeycomb">

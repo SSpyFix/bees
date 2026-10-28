@@ -24,7 +24,7 @@ import {
 } from "../game/systems/simulation";
 import map from "../game/data/imported-map.json";
 import { surface } from "../game/world/terrain";
-import { FIELDS, TOOLS, BEES, QUESTS, RAMPS } from "../game/data/content";
+import { FIELDS, TOOLS, BEES, QUESTS, RAMPS, PLACES } from "../game/data/content";
 
 const inField = () => {
   const s = createGame();
@@ -133,6 +133,7 @@ describe("economy and hive", () => {
     expect(hatch(s)).toBe(false);
     expect(s.inventory.egg).toBe(eggs);
     s.honey = 100000000;
+    Object.assign(s.player,PLACES.find(p=>p.id==='shop-25'));
     expect(buySlot(s)).toBe(true);
     expect(hatch(s)).toBe(true);
   });

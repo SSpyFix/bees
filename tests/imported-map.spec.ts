@@ -276,3 +276,26 @@ test('admin max-level button upgrades every owned bee and saves it',async({page}
  expect(saved.bees.map((b:any)=>b.gifted)).toEqual([false,true]);
  await expect(page.getByRole('complementary',{name:'Admin menu'})).toContainText('All bees are now level 25.');
 });
+
+
+test('Mountain Top Shop sells the next hive slot at the correct price and caps at fifty',async({page})=>{
+ test.setTimeout(150000);
+ await openMap(page,{honey:10750000,bees:Array.from({length:25},()=>({kind:'bee-0',level:1})),position:map.places['shop-25']});
+ await page.keyboard.press('e');
+ await page.getByRole('button',{name:'View Hive Slot',exact:true}).click();
+ await expect(page.locator('.shop-detail-card')).toContainText('3,000,000 Honey');
+ await page.getByRole('button',{name:/Buy Hive Slot.*3,000,000 Honey/}).click();
+ await expect(page.locator('.shop-detail-card')).toContainText('Hive slots: 26 / 50');
+ await page.getByRole('button',{name:/Buy Hive Slot.*7,750,000 Honey/}).click();
+ let saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
+ expect(saved.slots).toBe(27);expect(saved.honey).toBe(0);expect(saved.bees).toHaveLength(25);
+ await expect(page.getByRole('button',{name:/Buy Hive Slot/})).toBeDisabled();
+ await page.evaluate(async()=>{
+  const state=(await import('/src/game/systems/store.ts')).useGame.getState();
+  state.game.slots=49;state.game.honey=2169203229760;state.refresh();
+ });
+ await page.getByRole('button',{name:/Buy Hive Slot.*2,169,203,229,760 Honey/}).click();
+ await expect(page.getByRole('button',{name:'Maximum 50 hive slots',exact:true})).toBeDisabled();
+ saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
+ expect(saved.slots).toBe(50);expect(saved.honey).toBe(0);expect(saved.bees).toHaveLength(25);
+});

@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { MAX_HIVE_SLOTS } from "../game/data/hive-slots";
 import { GEAR } from "../game/data/content";
 import type { Gear } from "../game/data/equipment";
 import { ITEM_NAMES } from "../game/data/progression";
 import { useGame, sound } from "../game/systems/store";
-import { buy, maxPurchase, eggCost, jellyCost, purchaseCost } from "../game/systems/simulation";
+import { buy, maxPurchase, eggCost, jellyCost, purchaseCost, slotCost, buySlot } from "../game/systems/simulation";
 import ShopPreview from "./ShopPreview";
 export default function ShopExperience({
   consumables = false,
@@ -64,8 +65,13 @@ export default function ShopExperience({
           description: "Instantly converts all carried pollen into honey.",
         },
       ].filter(item => placeId === "treat-shop" ? item.id === "treat" : placeId === "jelly-shop" ? item.id === "jelly" : item.id === "egg")
-    : gear;
+    : [...gear, ...(placeId==='shop-25' ? [{
+        id:'hive-slot', name:'Hive Slot', type:'hive-slot', cost:s.slots>=MAX_HIVE_SLOTS?0:slotCost(s), gate:25,
+        description:'Adds one empty hive slot, allowing you to hatch one additional bee. Start with 25 slots and expand to 50. Each additional slot costs more honey.',
+      }] : [])];
   const item = items[selected % items.length];
+  const hiveSlot=item.id==='hive-slot';
+  const fullyExpanded=hiveSlot&&s.slots>=MAX_HIVE_SLOTS;
   const qty = consumables
     ? quantity === "max"
       ? maxPurchase(s, item.id)
@@ -79,6 +85,7 @@ export default function ShopExperience({
   const missing = !owned && "ingredients" in item && Object.entries(item.ingredients ?? {}).some(([id, n]) => (s.inventory[id] ?? 0) < n);
   const affordable = owned || s.honey >= total;
   const disabled =
+    fullyExpanded ||
     equipped ||
     locked ||
     !affordable ||
@@ -100,7 +107,8 @@ export default function ShopExperience({
       </div>
       <article className="item-card shop-detail-card" aria-live="polite">
         <h3>{item.name}</h3>
-        <p className="shop-price">{item.cost.toLocaleString()} Honey</p>
+        <p className="shop-price">{fullyExpanded ? "Fully expanded" : `${item.cost.toLocaleString()} Honey`}</p>
+        {hiveSlot && <p>Hive slots: {s.slots} / {MAX_HIVE_SLOTS}{!fullyExpanded && ` · Next: slot ${s.slots+1}`}</p>}
         <p>{item.description}</p>
         {"ingredients" in item && item.ingredients && <ul className="recipe-list">
           {Object.entries(item.ingredients).map(([id, n]) => <li key={id} className={(s.inventory[id] ?? 0) < n ? "missing" : ""}>
@@ -140,14 +148,14 @@ export default function ShopExperience({
           className={`button shop-purchase ${equipped ? "equipped" : ""} ${!affordable ? "cant-afford" : ""}`}
           disabled={disabled}
           onClick={() => {
-            const success = buy(s, item.id, qty);
+            const success = hiveSlot ? buySlot(s) : buy(s, item.id, qty);
             setFailure(success ? "" : s.notification);
             refresh();
             save();
             sound();
           }}
         >
-          {equipped
+          {fullyExpanded ? "Maximum 50 hive slots" : hiveSlot && !locked ? `Buy Hive Slot · ${item.cost.toLocaleString()} Honey` : equipped
             ? "✓ Equipped"
             : locked
               ? `${item.gate} bees required`
