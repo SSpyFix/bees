@@ -8,6 +8,8 @@ export type Flower = Vec & {
   max: number;
   regen: number;
   multiplier: number;
+  texture?: number;
+  width?: number;
 };
 export type BeeState =
   | "following"
@@ -29,6 +31,7 @@ export type Bee = Vec & {
   timer: number;
   abilityTimer: number;
   phase: number;
+  gifted: boolean;
 };
 export type Enemy = Vec & {
   id: number;
@@ -49,12 +52,24 @@ export type Token = Vec & {
   value: number;
   life: number;
 };
-export type Buff = { kind: string; remaining: number; value: number };
+export type Buff = {
+  kind: string;
+  remaining: number;
+  value: number;
+  stacks?: number;
+};
 export type Floater = Vec & {
   id: number;
   text: string;
   color: string;
   life: number;
+};
+export type WorldEffect = Vec & {
+  id: number;
+  kind: string;
+  radius: number;
+  life: number;
+  duration: number;
 };
 export type Game = {
   version: 2;
@@ -68,6 +83,19 @@ export type Game = {
   hat: string;
   owned: string[];
   slots: number;
+  eggsPurchased: number;
+  jelliesPurchased: number;
+  lifetime: Record<string, number>;
+  badges: Record<string, number>;
+  crafting: { item: string; quantity: number; elapsed: number } | null;
+  sprinkler: number;
+  sprinklers: (Vec & {
+    id: number;
+    field: string;
+    setup: number;
+    timer: number;
+    pulse: number;
+  })[];
   bees: Bee[];
   player: Vec & {
     yaw: number;
@@ -83,7 +111,9 @@ export type Game = {
   tokens: Token[];
   buffs: Buff[];
   floaters: Floater[];
+  effects: WorldEffect[];
   inventory: Record<string, number>;
+  hotbar: (string | null)[];
   accepted: Record<string, number[]>;
   completed: string[];
   unlocks: number[];
@@ -108,10 +138,13 @@ export type Game = {
   noticeId: number;
   cooldowns: Record<string, number>;
   challenge: { remaining: number; gathered: number; target: number } | null;
+  jellyRun: { beeId: string; used: number; running: boolean; rarity: "Any" | "Legendary" | "Mythic"; gifted: boolean } | null;
   settings: {
     volume: number;
     muted: boolean;
     sensitivity: number;
     quality: "high" | "low";
+    jellyRarity: "Any" | "Legendary" | "Mythic";
+    jellyGifted: boolean;
   };
 };

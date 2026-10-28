@@ -278,7 +278,36 @@ export function ReferenceScenery() {
       {PLACES.filter(
         (p) => p.kind !== "npc" && p.kind !== "cannon" && !p.id.endsWith("-hq"),
       ).map((p) =>
-        p.kind === "tickets" ? (
+        p.kind === "guild" ? (
+          <group key={p.id} position={[p.x, p.y, p.z]}>
+            <Box position={[0, 1.5, 4]} scale={[10, 3, 4]} color="#f5d64c" />
+            <Box
+              position={[0, 3.1, 4]}
+              scale={[10.5, 0.25, 4.5]}
+              color="#eee8d8"
+            />
+            <Box position={[-4, 4, 4]} scale={[0.5, 8, 0.5]} color="#ffcf38" />
+            <Box position={[4, 4, 4]} scale={[0.5, 8, 0.5]} color="#ffcf38" />
+            <Box position={[0, 8, 4]} scale={[9, 0.7, 1]} color="#ffcf38" />
+            <mesh position={[0, 4.5, 4]}>
+              <cylinderGeometry args={[1.2, 0.8, 2.6, 8]} />
+              <meshStandardMaterial color="#b5e4ed" transparent opacity={0.6} />
+            </mesh>
+            <Box
+              position={[0, 3.35, 4]}
+              scale={[2.4, 0.4, 2.4]}
+              color="#dedede"
+            />
+            <Box position={[0, 5.9, 4]} scale={[2.6, 0.25, 2.6]} color="#fff" />
+            <Label
+              text="BADGE BEARER’S GUILD"
+              position={[0, 9.3, 4]}
+              width={11}
+              size={1}
+              background="#333"
+            />
+          </group>
+        ) : p.kind === "tickets" ? (
           <group key={p.id} position={[p.x, p.y, p.z]}>
             <Box position={[0, 1.5, 2]} scale={[6, 3, 4]} color="#f4d125" />
             <mesh position={[0, 4, 2]} rotation={[0, Math.PI / 4, 0]}>
@@ -379,6 +408,7 @@ export function ReferenceHives() {
                         face={def.face}
                         rarity={def.rarity}
                         animate={false}
+                        gifted={b?.gifted}
                       />
                     </group>
                   )}

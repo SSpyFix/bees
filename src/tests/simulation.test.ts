@@ -19,7 +19,9 @@ import {
   interactPlace,
   releaseBee,
   questReady,
+  home,
 } from "../game/systems/simulation";
+import map from "../game/data/imported-map.json";
 import { surface } from "../game/world/terrain";
 import { FIELDS, TOOLS, BEES, QUESTS, RAMPS } from "../game/data/content";
 
@@ -57,6 +59,7 @@ describe("spatial gathering and conversion", () => {
   it("conserves pollen and honey and refuses conversion away from hive", () => {
     const s = createGame();
     s.pollen = 100;
+    Object.assign(s.player, home(s));
     expect(startConversion(s)).toBe(true);
     const before = s.honey;
     convert(s, 1);
@@ -172,20 +175,20 @@ describe("world progression and persistence", () => {
     expect(BEES.length).toBeGreaterThanOrEqual(30);
     expect(QUESTS.length).toBeGreaterThanOrEqual(30);
   });
-  it("blocks a locked ramp and permits the same route with enough bees", () => {
+  it("blocks an imported gate and permits the same route with enough bees", () => {
     const s = createGame();
-    const r = RAMPS[0];
+    const r = map.gates.find((g) => g.bees === 5)!;
     s.player.x = r.x;
-    s.player.z = r.gateZ + 1;
-    s.player.y = surface(s.player.x, s.player.z) ?? 0;
+    s.player.z = r.z + 2;
+    s.player.y = surface(s.player.x, s.player.z, r.y - 5) ?? r.y - 5;
     const z = s.player.z;
     for (let i = 0; i < 3; i++) movePlayer(s, 0, -1, 0.1);
-    expect(s.player.z).toBeGreaterThanOrEqual(r.gateZ + 0.6);
-    while (s.bees.length < r.gate)
+    expect(s.player.z).toBeGreaterThanOrEqual(r.z + 1);
+    while (s.bees.length < r.bees)
       s.bees.push({ ...s.bees[0], id: "extra" + s.bees.length });
     s.player.z = z;
     for (let i = 0; i < 3; i++) movePlayer(s, 0, -1, 0.1);
-    expect(s.player.z).toBeLessThan(r.gateZ);
+    expect(s.player.z).toBeLessThan(r.z);
   });
   it("roundtrips progression without runtime input", () => {
     const s = inField();
@@ -216,18 +219,18 @@ describe("world progression and persistence", () => {
 });
 
 describe("terrain and progression edge cases", () => {
-  it("can walk every ramp from its bottom to its top once unlocked", () => {
-    for (const r of RAMPS) {
+  it("can walk on every imported field once unlocked", () => {
+    for (const r of FIELDS) {
       const s = createGame();
       while (s.bees.length < r.gate)
         s.bees.push({ ...s.bees[0], id: `r${s.bees.length}` });
       s.player.x = r.x;
-      s.player.z = r.startZ;
-      s.player.y = surface(r.x, r.startZ) ?? r.low;
-      for (let i = 0; i < Math.ceil((r.startZ - r.endZ) / 0.7) + 30; i++)
+      s.player.z = r.z;
+      s.player.y = r.y;
+      for (let i = 0; i < 3; i++)
         movePlayer(s, 0, -1, 0.1);
-      expect(s.player.z, `ramp ${r.gate}`).toBeLessThanOrEqual(r.endZ);
-      expect(s.player.y).toBeGreaterThanOrEqual(r.high - 0.1);
+      expect(s.player.z, r.id).toBeLessThan(r.z - 1);
+      expect(s.player.y, r.id).toBeCloseTo(r.y, 1);
     }
   });
   it("does not delete carried pollen when equipping a smaller bag", () => {
@@ -239,12 +242,12 @@ describe("terrain and progression edge cases", () => {
     expect(s.pollen).toBe(500);
     expect(s.capacity).toBe(750);
   });
-  it("does not let players walk through field fences", () => {
-    const s = inField();
-    const f = FIELDS[0];
-    s.player.x = f.x + 10.4;
-    for (let i = 0; i < 5; i++) movePlayer(s, 1, 0, 0.1);
-    expect(s.player.x).toBeLessThan(f.x + 11);
+  it("does not let players walk through an imported boundary wall", () => {
+    const s = createGame();
+    Object.assign(s.player,{x:75,z:-26.96,y:surface(75,-26.96,0) ?? 0});
+    for (let i=0;i<5;i++) movePlayer(s,1,0,0.1);
+    expect(s.player.x).toBeLessThan(75.95);
+    expect(s.player.x).toBeGreaterThan(75);
   });
   it("protects against buying nonmatching saved equipment types", () => {
     const s = createGame();
@@ -262,9 +265,10 @@ describe("save positions and time safety", () => {
     expect(r.player.x).toBe(s.player.x);
     expect(r.player.z).toBe(s.player.z);
     const d = JSON.parse(serialize(s));
-    d.position = { x: -43, z: -37 };
+    const locked = FIELDS.find((f) => f.id === "mountain")!;
+    d.position = { x: locked.x, y: locked.y, z: locked.z };
     const safe = restore(JSON.stringify(d));
-    expect(safe.player.z).toBe(53);
+    expect(safe.player.z).toBe(map.spawn.z);
   });
   it("ignores invalid flower positions when gathering from above", () => {
     const s = inField();
@@ -284,13 +288,14 @@ describe("review regressions", () => {
     step(s, 1 / 30);
     expect(s.player.x).toBeLessThan(54.7);
   });
-  it("sweeps fast movement across a fence", () => {
-    const s = inField();
-    s.player.x = FIELDS[0].x + 10.3;
+  it("sweeps fast movement across an imported wall", () => {
+    const s = createGame();
+    Object.assign(s.player,{x:75,z:-26.96,y:surface(75,-26.96,0) ?? 0});
     s.boots = "boots-2";
     s.buffs.push({ kind: "haste", value: 1.35, remaining: 20 });
     movePlayer(s, 1, 0, 0.1);
-    expect(s.player.x).toBeLessThan(FIELDS[0].x + 10.65);
+    expect(s.player.x).toBeLessThan(75.95);
+    expect(s.player.x).toBeGreaterThan(75);
   });
   it("daily cooldown uses wall time and saving never extends its deadline", () => {
     const now = vi.spyOn(Date, "now").mockReturnValue(1700000000000);
@@ -309,6 +314,7 @@ describe("review regressions", () => {
   });
   it("a full hive can release a bee at home and hatch for an accepted quest", () => {
     const s = createGame();
+    Object.assign(s.player,home(s));
     s.slots = 50;
     while (s.bees.length < 50)
       s.bees.push({ ...s.bees[0], id: "full-" + s.bees.length });

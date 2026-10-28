@@ -1,3 +1,5 @@
+import BeeAbilities from "./BeeAbilities";
+import { abilityNames } from "../game/data/abilities";
 import { useState } from "react";
 import { BEES, RARITY_COLORS } from "../game/data/content";
 import { BeeIcon } from "./Icons";
@@ -46,7 +48,7 @@ export default function BeeIndex() {
             ["Speed", chosen.speed],
             ["Attack", chosen.attack],
             ["Energy", chosen.energy > 10000 ? "∞" : chosen.energy],
-            ["Ability", chosen.ability],
+            ["Abilities", abilityNames(chosen)],
           ].map(([k, v]) => (
             <span key={k}>
               {k}
@@ -54,6 +56,7 @@ export default function BeeIndex() {
             </span>
           ))}
         </div>
+        <BeeAbilities bee={chosen} showGifted />
         <p>
           {s.bees.some((x) => x.kind === chosen.id)
             ? "In your hive"

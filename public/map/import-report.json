@@ -1,0 +1,244 @@
+{
+  "scriptsExcluded": 96,
+  "controlCharactersRemoved": 7,
+  "classes": {
+    "Model": 754,
+    "Accessory": 15,
+    "Part": 16231,
+    "Weld": 913,
+    "SpecialMesh": 662,
+    "UnionOperation": 559,
+    "Attachment": 741,
+    "SurfaceGui": 47,
+    "Frame": 837,
+    "CylinderMesh": 294,
+    "BlockMesh": 527,
+    "Decal": 13312,
+    "TextLabel": 866,
+    "Script": 53,
+    "Vector3Value": 71,
+    "BoolValue": 204,
+    "MeshPart": 229,
+    "BillboardGui": 52,
+    "ImageLabel": 30,
+    "ObjectValue": 238,
+    "ModuleScript": 43,
+    "NumberValue": 262,
+    "Sound": 54,
+    "StringValue": 604,
+    "BodyPosition": 30,
+    "BodyAngularVelocity": 30,
+    "PointLight": 11,
+    "ParticleEmitter": 135,
+    "Motor6D": 168,
+    "Humanoid": 10,
+    "Animator": 10,
+    "BodyColors": 10,
+    "Animation": 346,
+    "Folder": 8,
+    "IntValue": 12854,
+    "CFrameValue": 246,
+    "SpotLight": 5,
+    "Beam": 10,
+    "Snap": 54,
+    "Texture": 6,
+    "ManualWeld": 1790,
+    "NoCollisionConstraint": 19,
+    "RemoteEvent": 9,
+    "Tool": 9,
+    "RigidConstraint": 3,
+    "BodyVelocity": 71,
+    "BodyGyro": 71,
+    "Fire": 9,
+    "Trail": 1,
+    "Smoke": 4,
+    "SpawnLocation": 1,
+    "WedgePart": 56,
+    "SurfaceLight": 12,
+    "Glue": 11,
+    "ScrollingFrame": 5,
+    "AlignPosition": 4,
+    "AlignOrientation": 7,
+    "RopeConstraint": 3,
+    "Color3Value": 5
+  },
+  "assetFailures": {
+    "31669603": "HTTP Error 401: Unauthorized",
+    "42740142": "HTTP Error 401: Unauthorized",
+    "55054494": "HTTP Error 401: Unauthorized",
+    "81802189": "HTTP Error 401: Unauthorized",
+    "116982195": "HTTP Error 401: Unauthorized",
+    "192507717": "HTTP Error 401: Unauthorized",
+    "199469606": "HTTP Error 401: Unauthorized",
+    "206569796": "HTTP Error 401: Unauthorized",
+    "430748458": "HTTP Error 401: Unauthorized",
+    "430751682": "HTTP Error 401: Unauthorized",
+    "651913837": "HTTP Error 401: Unauthorized",
+    "651916672": "HTTP Error 401: Unauthorized",
+    "824252893": "HTTP Error 401: Unauthorized",
+    "889117322": "HTTP Error 401: Unauthorized",
+    "922323283": "HTTP Error 401: Unauthorized",
+    "1328648995": "HTTP Error 401: Unauthorized",
+    "2431703579": "HTTP Error 401: Unauthorized",
+    "3084546446": "HTTP Error 401: Unauthorized",
+    "3494219404": "HTTP Error 401: Unauthorized",
+    "3528252383": "HTTP Error 401: Unauthorized",
+    "5567852995": "HTTP Error 401: Unauthorized",
+    "6026173289": "HTTP Error 401: Unauthorized",
+    "6046682536": "HTTP Error 401: Unauthorized",
+    "6257841548": "HTTP Error 401: Unauthorized",
+    "6280282538": "HTTP Error 401: Unauthorized",
+    "6280951363": "HTTP Error 401: Unauthorized",
+    "6280979921": "HTTP Error 401: Unauthorized",
+    "6280979940": "HTTP Error 401: Unauthorized",
+    "6280997423": "HTTP Error 401: Unauthorized",
+    "6281016523": "HTTP Error 401: Unauthorized"
+  },
+  "source": "bss.rbxmx",
+  "sourceBytes": 106038871,
+  "sourceParts": 17076,
+  "convertedParts": 16981,
+  "flowers": 12510,
+  "collisionTriangles": 81762,
+  "drawBatches": 284,
+  "removedLegacyWalls": [
+    {
+      "name": "Model/Model/Part",
+      "position": [
+        -29.43354,
+        -4.73375,
+        65.4588
+      ]
+    }
+  ],
+  "openedGateWalls": [
+    {
+      "name": "Model/Model/Part",
+      "position": [
+        39.29925,
+        9.09998,
+        -72.63732
+      ]
+    }
+  ],
+  "excludedBeeModels": [
+    "Model/Model/Bee269",
+    "Model/Model/Bee277",
+    "Model/Model/Bee210",
+    "Model/Model/Bee202",
+    "Model/Model/Bee209",
+    "Model/Model/Bee111",
+    "Model/Model/Bee114",
+    "Model/Model/Bee216",
+    "Model/Model/Bee65",
+    "Model/Model/Bee268",
+    "Model/Model/Bee218",
+    "Model/Model/Bee152",
+    "Model/Model/Bee271",
+    "Model/Model/Bee278",
+    "Model/Model/Bee119",
+    "Model/Model/Bee191",
+    "Model/Model/Bee192",
+    "Model/Model/Bee188",
+    "Model/Model/Bee147",
+    "Model/Model/Bee162",
+    "Model/Model/Bee157",
+    "Model/Model/Bee153",
+    "Model/Model/Bee146",
+    "Model/Model/Bee156",
+    "Model/Model/Bee181",
+    "Model/Model/Bee142",
+    "Model/Model/Bee127",
+    "Model/Model/Bee87",
+    "Model/Model/Bee182",
+    "Model/Model/Bee112",
+    "Model/Model/Bee176",
+    "Model/Model/Bee177",
+    "Model/Model/Bee155",
+    "Model/Model/Bee34",
+    "Model/Model/Bee171",
+    "Model/Model/Bee189",
+    "Model/Model/Bee143",
+    "Model/Model/Bee128",
+    "Model/Model/Bee170",
+    "Model/Model/Bee190",
+    "Model/Model/Bee121",
+    "Model/Model/Bee266"
+  ],
+  "excludedBeeParts": 95,
+  "clearedHivePortraits": 42,
+  "meshFailures": [
+    {
+      "asset": "192507717",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "206569796",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "430748458",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "651913837",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "199469606",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "824252893",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "6257841548",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "6280282538",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "6026173289",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "3084546446",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "3528252383",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "1328648995",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "6280979921",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "5567852995",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "6280979940",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "2431703579",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "889117322",
+      "reason": "Asset unavailable"
+    },
+    {
+      "asset": "3494219404",
+      "reason": "Asset unavailable"
+    }
+  ]
+}

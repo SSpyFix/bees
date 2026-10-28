@@ -4,3 +4,7 @@ dist/
 test-results/
 playwright-report/
 .local/
+
+# Generated Python bytecode
+__pycache__/
+*.py[cod]

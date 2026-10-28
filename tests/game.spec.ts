@@ -1,30 +1,48 @@
 import { test, expect, type Page } from "@playwright/test";
+import map from "../src/game/data/imported-map.json" with { type: "json" };
+const field = (id: string) => map.fields.find((f) => f.id === id)!;
+const gate = map.gates.find((g) => g.bees === 5)!;
 const saveKey = "pollen-peak-save-v2";
 async function prepare(page: Page, seed: Record<string, unknown> = {}) {
   await page.addInitScript(
-    ({ key, seed }) => {
+    ({ key, seed, mapVersion }) => {
       if (!localStorage.getItem(key))
         localStorage.setItem(
           key,
           JSON.stringify({
             version: 2,
+            mapVersion: mapVersion,
             settings: { quality: "low", muted: true },
             ...seed,
           }),
         );
     },
-    { key: saveKey, seed },
+    { key: saveKey, seed, mapVersion: map.version },
   );
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Bee Swarm Simulator", exact: true }),
   ).toBeVisible();
-  await expect(page.locator('canvas[data-interactive="true"]')).toBeVisible();
+  await expect(page.locator('canvas[data-interactive="true"]')).toBeVisible({ timeout: 45000 });
   // Align the test movement axes with the world; the game opens in a diagonal overview.
   await page.mouse.move(500, 450);
   await page.mouse.down({ button: "right" });
   await page.mouse.move(576, 450, { steps: 4 });
   await page.mouse.up({ button: "right" });
+}
+async function travel(page: Page, position: { x: number; y: number; z: number }) {
+  // Place fixtures exercise interactions at each imported landmark. Movement and
+  // trail traversal are covered separately against the actual collision mesh.
+  await page.addInitScript(({ version, key }) => {
+    const next = sessionStorage.getItem("bss-test-position");
+    if (!next) return;
+    const saved = JSON.parse(localStorage.getItem(key)!);
+    saved.position = JSON.parse(next); saved.mapVersion = version;
+    localStorage.setItem(key, JSON.stringify(saved));
+    sessionStorage.removeItem("bss-test-position");
+  }, { version: map.version, key: saveKey });
+  await page.evaluate((position) => sessionStorage.setItem("bss-test-position", JSON.stringify(position)), position);
+  await prepare(page);
 }
 async function coord(page: Page, axis: "x" | "z") {
   return Number(
@@ -64,6 +82,30 @@ async function amount(page: Page, id: string) {
   return Number((await page.getByTestId(id).innerText()).replaceAll(",", ""));
 }
 
+test("keeps the published compact UI and inventory overlays over the same 3D shop", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", e => errors.push(e.message));
+  await prepare(page, { position: map.places.shop, honey: 10000 });
+  await expect(page.locator(".quest-tracker")).toHaveCount(0);
+  await expect(page.locator(".top-hud")).toHaveCSS("height", "28px");
+  await expect(page.getByRole("button", { name: "Show badges" })).toBeVisible();
+  await page.screenshot({ path: "test-results/current-ui-world.png" });
+  await page.keyboard.press("e");
+  await page.getByRole("button", { name: "View Rake", exact: true }).click();
+  await expect(page.locator(".shop-stage canvas")).toBeVisible();
+  await page.getByRole("button", { name: "Show inventory", exact: true }).click();
+  await expect(page.locator(".ui-inventory .modal")).toBeVisible();
+  await expect(page.locator(".ui-shop.shop-background")).toBeVisible();
+  await expect(page.locator(".shop-detail-card h3")).toHaveText("Rake");
+  await page.screenshot({ path: "test-results/current-ui-shop-inventory.png" });
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".ui-inventory")).toHaveCount(0);
+  await expect(page.locator(".shop-detail-card h3")).toHaveText("Rake");
+  await page.keyboard.press("e");
+  await expect(page.locator(".shop-experience")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("loads the 3D world, moves, jumps, orbits, zooms and resumes after menus", async ({
   page,
 }) => {
@@ -71,10 +113,17 @@ test("loads the 3D world, moves, jumps, orbits, zooms and resumes after menus", 
   page.on("pageerror", (e) => errors.push(e.message));
   await prepare(page);
   await page.screenshot({ path: "test-results/pollen-peak-world.png" });
-  await move(page, "w", "z", 50, true);
+  const startZ = await coord(page,"z");
+  await move(page, "w", "z", startZ - 2, true);
+  const ground = await page.evaluate(async () => {
+    const { useGame } = await import("/src/game/systems/store.ts");
+    const { surface } = await import("/src/game/world/terrain.ts");
+    const p = useGame.getState().game.player;
+    return surface(p.x, p.z, p.y) ?? p.y;
+  });
   await page.keyboard.press("Space");
-  await expect(page.getByTestId("player-height")).not.toHaveText("0.0");
-  await expect(page.getByTestId("player-height")).toHaveText("0.0");
+  await expect.poll(async () => Number(await page.getByTestId("player-height").innerText())).toBeGreaterThan(ground + 0.5);
+  await expect(page.getByTestId("player-height")).toHaveText(ground.toFixed(1));
   await page.mouse.move(600, 400);
   await page.mouse.down({ button: "right" });
   await page.mouse.move(690, 440, { steps: 10 });
@@ -83,7 +132,7 @@ test("loads the 3D world, moves, jumps, orbits, zooms and resumes after menus", 
   await page.keyboard.press("m");
   await expect(page.getByRole("heading", { name: "World Map" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.getByRole("button", { name: "Show inventory", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Inventory" })).toBeVisible();
   await page.keyboard.press("Escape");
   await page
@@ -97,19 +146,19 @@ test("loads the 3D world, moves, jumps, orbits, zooms and resumes after menus", 
   expect(errors).toEqual([]);
 });
 
-test("plays the actual gather → quest → convert → purchase → hatch → save loop", async ({
+test("preserves the gather → quest → convert → purchase → hatch → save loop at imported landmarks", async ({
   page,
 }) => {
   test.setTimeout(240000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await prepare(page, { position: { x: -7, z: 19.5 }, honey: 2000 });
+  await prepare(page, { position: map.places.juniper, honey: 2000 });
   await page.keyboard.press("e");
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Accept quest", exact: true }).click();
   await page.keyboard.press("Escape");
-  await move(page, "d", "x", 0, false);
-  await expect(page.getByTestId("scene-status")).toHaveText("Dandelion Field");
+  await travel(page, field("sunflower"));
+  await expect(page.getByTestId("scene-status")).toHaveText("Sunflower Field");
   // No clicks: the first bee must independently choose a flower, fly there and gather.
   await expect
     .poll(() => amount(page, "pollen"), { timeout: 45000 })
@@ -124,17 +173,16 @@ test("plays the actual gather → quest → convert → purchase → hatch → s
   await page.getByRole("button", { name: "Claim reward", exact: true }).click();
   await expect.poll(() => amount(page, "honey")).toBeGreaterThanOrEqual(150);
   await page.keyboard.press("Escape");
-  await move(page, "s", "z", 52, false);
+  await travel(page, map.hives[3]);
   await page.keyboard.press("f");
   await expect.poll(() => amount(page, "pollen"), { timeout: 60000 }).toBe(0);
   await expect.poll(() => amount(page, "honey")).toBeGreaterThan(2300);
-  await move(page, "w", "z", 48, true);
-  await move(page, "a", "x", -47, true);
-  await move(page, "s", "z", 51, false);
+  await travel(page, map.places.shop);
   await page.keyboard.press("e");
   await expect(
     page.getByRole("heading", { name: "Basic Shop", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "View Rake", exact: true }).click();
   const rake = page.locator(".item-card").filter({
     has: page.getByRole("heading", { name: "Rake", exact: true }),
   });
@@ -176,26 +224,23 @@ test("shop refuses poor purchases and gates physically block an undersized swarm
   page,
 }) => {
   test.setTimeout(120000);
-  await prepare(page, { position: { x: -12, z: 53 } });
-  await move(page, "w", "z", 48, true);
-  await move(page, "a", "x", -47, true);
-  await move(page, "s", "z", 51, false);
+  await prepare(page, { position: map.places.shop });
+  await travel(page, map.places.shop);
   await page.keyboard.press("e");
+  await page.getByRole("button", { name: "View Rake", exact: true }).click();
   const rake = page.locator(".item-card").filter({
     has: page.getByRole("heading", { name: "Rake", exact: true }),
   });
   await expect(rake.getByRole("button")).toBeDisabled();
   await page.keyboard.press("Escape");
-  await move(page, "w", "z", 48, true);
-  await move(page, "d", "x", -13, false);
-  await move(page, "w", "z", -17, true);
+  await travel(page, { x: gate.x, y: gate.y - 5, z: gate.z + 3 });
   await page.keyboard.down("w");
   await page.waitForTimeout(2500);
   await page.keyboard.up("w");
-  expect(await coord(page, "z")).toBeGreaterThanOrEqual(-18.35);
+  expect(await coord(page, "z")).toBeGreaterThanOrEqual(gate.z + 1);
 });
 
-test("a five-bee save unlocks the connected ramp and survives reload", async ({
+test("a five-bee save unlocks the imported gate", async ({
   page,
 }) => {
   test.setTimeout(120000);
@@ -207,14 +252,14 @@ test("a five-bee save unlocks the connected ramp and survives reload", async ({
       bond: 0,
     })),
     slots: 5,
-    position: { x: -12, z: -14 },
+    position: { x: gate.x, y: gate.y - 5, z: gate.z + 3 },
   });
-  await move(page, "w", "z", -44, true);
+  await move(page, "w", "z", gate.z - 3, true);
   await expect
     .poll(async () =>
       Number(await page.getByTestId("player-height").innerText()),
     )
-    .toBeGreaterThanOrEqual(8);
+    .toBeGreaterThanOrEqual(5);
   await page.keyboard.press("m");
   await expect(page.getByRole("heading", { name: "World Map" })).toBeVisible();
   await page.screenshot({ path: "test-results/pollen-peak-map.png" });
@@ -234,7 +279,7 @@ test("bees defeat a creature and its loot rewards actual honey", async ({
       bond: 0,
       energy: 80,
     })),
-    position: { x: 43, z: 14 },
+    position: { x: field("mushroom").x + 5, y: field("mushroom").y, z: field("mushroom").z + 5 },
     accepted: { "rowan-0": [0] },
   });
   await expect
@@ -259,7 +304,7 @@ test("shows the current 46-bee portrait roster and saves a newly claimed hive", 
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await prepare(page, { position: { x: -60, z: 61 }, pollen: 100 });
+  await prepare(page, { position: map.hives[0], pollen: 100 });
   await page.keyboard.press("e");
   await expect(page.getByRole("status")).toContainText("Hive claimed");
   await page.keyboard.press("f");
@@ -272,11 +317,11 @@ test("shows the current 46-bee portrait roster and saves a newly claimed hive", 
   await page.getByRole("button", { name: "Digital Bee", exact: true }).click();
   await expect(page.locator(".bee-index h3")).toHaveText("Digital Bee");
   await page.screenshot({
-    path: "/workspace/artifacts/bss-current/bee-roster.png",
+    path: "test-results/bee-roster.png",
   });
   await page.keyboard.press("Escape");
   await page.keyboard.press("m");
-  await page.screenshot({ path: "/workspace/artifacts/bss-current/map.png" });
+  await page.screenshot({ path: "test-results/map.png" });
   await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: "Open settings", exact: true })
@@ -299,7 +344,7 @@ test("Ticket Tent spends earned tickets on a unique functional Event bee", async
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await prepare(page, {
-    position: { x: -28, z: 49 },
+    position: map.places.tickets,
     inventory: { ticket: 500 },
   });
   await page.keyboard.press("e");
@@ -314,7 +359,7 @@ test("Ticket Tent spends earned tickets on a unique functional Event bee", async
   await expect(photon.getByRole("button")).toHaveText("In your hive");
   await expect(photon.getByRole("button")).toBeDisabled();
   await page.screenshot({
-    path: "/workspace/artifacts/bss-current/ticket-tent.png",
+    path: "test-results/ticket-tent.png",
   });
   await page.reload();
   await expect(page.getByTestId("bee-count")).toHaveText("2");
@@ -336,7 +381,7 @@ test("cannon launches an eligible swarm through a visible arc to the mountain", 
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await prepare(page, {
-    position: { x: -60, z: -28 },
+    position: map.places["red-cannon"],
     bees: Array.from({ length: 25 }, (_, i) => ({
       kind: `bee-${i}`,
       level: 1,
@@ -351,15 +396,15 @@ test("cannon launches an eligible swarm through a visible arc to the mountain", 
       async () => Number(await page.getByTestId("player-height").innerText()),
       { timeout: 45000 },
     )
-    .toBeGreaterThan(33);
+    .toBeGreaterThan(35);
   await expect
     .poll(() => coord(page, "z"), { timeout: 60000 })
-    .toBeLessThan(-144);
-  await expect(page.getByTestId("player-height")).toHaveText("32.0", {
+    .toBeLessThan(field("mountain").z + 1);
+  await expect(page.getByTestId("player-height")).toHaveText(field("mountain").y.toFixed(1), {
     timeout: 30000,
   });
   await page.screenshot({
-    path: "/workspace/artifacts/bss-current/mountain.png",
+    path: "test-results/mountain.png",
   });
   expect(errors).toEqual([]);
 });
@@ -370,7 +415,7 @@ test("Blue HQ opens a real color-specific equipment shop and equips its purchase
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await prepare(page, {
-    position: { x: -63, z: -1 },
+    position: map.places["blue-hq"],
     honey: 4000000,
     bees: Array.from({ length: 10 }, () => ({
       kind: "bee-0",
@@ -383,11 +428,10 @@ test("Blue HQ opens a real color-specific equipment shop and equips its purchase
   await expect(
     page.getByRole("heading", { name: "Blue HQ", exact: true }),
   ).toBeVisible();
-  const wand = page
-    .locator(".item-card")
-    .filter({
-      has: page.getByRole("heading", { name: "Bubble Wand", exact: true }),
-    });
+  await page.getByRole("button", { name: "View Bubble Wand", exact: true }).click();
+  const wand = page.locator(".item-card").filter({
+    has: page.getByRole("heading", { name: "Bubble Wand", exact: true }),
+  });
   await wand.getByRole("button").click();
   await expect(wand.getByRole("button")).toHaveText("✓ Equipped");
   const saved = await page.evaluate(
@@ -397,9 +441,147 @@ test("Blue HQ opens a real color-specific equipment shop and equips its purchase
   expect(saved.tool).toBe("tool-10");
   expect(saved.honey).toBe(500000);
   await page.screenshot({
-    path: "/workspace/artifacts/bss-current/blue-hq.png",
+    path: "test-results/blue-hq.png",
   });
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("Ticket Tent Star Treat gifts the chosen bee and survives reload", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await prepare(page, {
+    position: map.places.tickets,
+    inventory: { ticket: 1000 },
+  });
+  await page.keyboard.press("e");
+  const card = page
+    .locator(".item-card")
+    .filter({
+      has: page.getByRole("heading", { name: "Star Treat", exact: true }),
+    });
+  await card.getByRole("button").click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("h");
+  await page
+    .getByRole("button", { name: "★ Give Star Treat", exact: false })
+    .click();
+  await expect(page.locator(".bee-detail h3")).toHaveText("★ Gifted Basic Bee");
+  await page.screenshot({ path: "test-results/gifted-hive.png" });
+  await page.reload();
+  await expect(page.locator('canvas[data-interactive="true"]')).toBeVisible({ timeout: 45000 });
+  await page.keyboard.press("h");
+  await expect(page.locator(".bee-detail h3")).toHaveText("★ Gifted Basic Bee");
+  const save = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)!),
+    saveKey,
+  );
+  expect(save.inventory.starTreat).toBe(0);
+  expect(save.inventory.ticket).toBe(0);
+  expect(save.bees[0].gifted).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("earned badges can be claimed once for tickets", async ({ page }) => {
+  await prepare(page, { lifetime: { "field:sunflower": 250000 } });
+  await page.keyboard.press("j");
+  const card = page
+    .locator(".badge-card")
+    .filter({
+      has: page.getByRole("heading", { name: "Sunflower Badge", exact: true }),
+    });
+  await card.getByRole("button", { name: "Claim Cadet", exact: false }).click();
+  await expect(card.getByRole("button")).toHaveText("Next: Hotshot");
+  await expect(card.getByRole("button")).toBeDisabled();
+  const save = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)!),
+    saveKey,
+  );
+  expect(save.inventory.ticket).toBe(5);
+  expect(save.badges.sunflower).toBe(1);
+  await page.screenshot({ path: "test-results/badges.png" });
+});
+
+test("guild buys a sprinkler and Blender refunds unfinished ingredients", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await prepare(page, {
+    position: map.places.guild,
+    honey: 2000000,
+    bees: Array.from({ length: 15 }, () => ({
+      kind: "bee-0",
+      level: 1,
+      bond: 0,
+      energy: 20,
+    })),
+    badges: { sunflower: 5, dandelion: 5, mushroom: 5 },
+    lifetime: {
+      "field:sunflower": 5e9,
+      "field:dandelion": 5e9,
+      "field:mushroom": 5e9,
+    },
+    inventory: { jelly: 10, strawberry: 50 },
+  });
+  await page.keyboard.press("e");
+  await expect(
+    page.getByRole("heading", { name: "Badge Bearer’s Guild", exact: true }),
+  ).toBeVisible();
+  const sprinkler = page
+    .locator(".item-card")
+    .filter({
+      has: page.getByRole("heading", { name: "Basic Sprinkler", exact: true }),
+    });
+  await sprinkler.getByRole("button").click();
+  await expect(sprinkler.getByRole("button")).toHaveText("Equipped");
+  await page.getByRole("button", { name: "Blender", exact: true }).click();
+  const extract = page
+    .locator(".item-card")
+    .filter({
+      has: page.getByRole("heading", { name: "Red Extract", exact: true }),
+    });
+  await extract.getByRole("button").click();
+  await expect(
+    page.getByRole("heading", { name: "Blending 1 Red Extract", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({ path: "test-results/blender.png" });
+  await page
+    .getByRole("button", {
+      name: "End Crafting & Refund Unfinished",
+      exact: true,
+    })
+    .click();
+  const save = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)!),
+    saveKey,
+  );
+  expect(save.sprinkler).toBe(0);
+  expect(save.honey).toBe(888889);
+  expect(save.crafting).toBe(null);
+  expect(save.inventory.strawberry).toBe(50);
+  expect(save.inventory.jelly).toBe(10);
+  expect(errors).toEqual([]);
+});
+
+test("a purchased Sprinkler Builder places a visible sprinkler in a field", async ({
+  page,
+}) => {
+  await prepare(page, { position: field("sunflower"), sprinkler: 0 });
+  await page.keyboard.press("r");
+  await expect(page.getByRole("status")).toContainText(
+    "Building Basic Sprinkler",
+  );
+  await page.getByRole("button", { name: "Show inventory", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Sprinkler Builder", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".inventory-item").first()).toContainText(
+    "1/1 placed",
+  );
+  await page.keyboard.press("Escape");
+  await page.screenshot({ path: "test-results/sprinkler-field.png" });
 });

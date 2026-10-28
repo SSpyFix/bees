@@ -14,6 +14,8 @@ export type Menu =
   | "shop"
   | "eggs"
   | "tickets"
+  | "guild"
+  | "badges"
   | "hive"
   | "bees"
   | "quests"
@@ -26,6 +28,8 @@ export const useGame = create<{
   revision: number;
   menu: Menu;
   placeId: string;
+  shopContext: { menu: "shop" | "eggs"; placeId: string } | null;
+  leaveShop: () => void;
   saveStatus: string;
   refresh: () => void;
   open: (menu: Menu, place?: string) => void;
@@ -36,12 +40,21 @@ export const useGame = create<{
   revision: 0,
   menu: null,
   placeId: "",
+  shopContext: null,
+  leaveShop: () => set({ menu: null, shopContext: null, placeId: "" }),
   saveStatus: "",
   refresh: () => set((x) => ({ revision: x.revision + 1 })),
   open: (menu, placeId = "") => {
     if (!menu && document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
-    set({ menu, placeId });
+    const context = get().shopContext;
+    if (menu === "shop" || menu === "eggs")
+      set({ menu, placeId, shopContext: { menu, placeId } });
+    else if (menu === null && context) {
+      if (get().menu === context.menu)
+        set({ menu: null, shopContext: null, placeId: "" });
+      else set({ menu: context.menu, placeId: context.placeId });
+    } else set({ menu, placeId: placeId || context?.placeId || "" });
   },
   save: () => {
     try {
@@ -62,6 +75,7 @@ export const useGame = create<{
       game: createGame(),
       revision: 0,
       menu: null,
+      shopContext: null,
       saveStatus: "New adventure",
     });
   },

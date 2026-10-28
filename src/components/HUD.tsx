@@ -1,3 +1,9 @@
+import { ITEM_NAMES } from '../game/data/progression';
+import { assignHotbar } from '../game/systems/item-actions';
+import { activateHotbar, beginItemDrag, endItemDrag, useItemDrag } from '../game/systems/item-drag';
+import TokenIcon from "./TokenIcon";
+import { MenuIcon, ItemIcon } from "./GameIcons";
+import { abilityInfo } from "../game/data/abilities";
 import { useEffect, useState } from "react";
 import { useGame, sound } from "../game/systems/store";
 import {
@@ -8,16 +14,13 @@ import {
   claimHive,
   interactPlace,
   startConversion,
-  useItem,
-  feed,
-  reroll,
 } from "../game/systems/simulation";
-import { TOOLS, QUESTS, PLACES } from "../game/data/content";
-import { BeeIcon, GearArt, HoneyIcon } from "./Icons";
+import { TOOLS } from "../game/data/content";
+import { BeeIcon, GearArt, ItemIcon as MaterialIcon } from "./Icons";
 import { MountainMap, number } from "./Menus";
 import type { Menu } from "../game/systems/store";
 export default function HUD() {
-  const { game: s, menu, open, revision, saveStatus } = useGame();
+  const { game: s, menu, open, revision, saveStatus, shopContext } = useGame();
   void revision;
   const field = currentField(s),
     near = nearestPlace(s),
@@ -50,82 +53,28 @@ export default function HUD() {
   };
   const interact = () => {
     if (near) {
-      if (["shop", "eggs", "npc", "tickets"].includes(near.kind))
+      if (["shop", "eggs", "npc", "tickets", "guild"].includes(near.kind))
         open(near.kind as Menu, near.id);
       else perform(() => interactPlace(s, near.id));
     } else if (pad && pad.index !== s.hive)
       perform(() => claimHive(s, pad.index));
     else if (hive) open("hive");
   };
-  const slots = [
-    {
-      key: "1",
-      label: tool.name,
-      type: "tool",
-      level: Number(s.tool.split("-")[1]),
-      fn: () => sound(500),
-      count: undefined,
-    },
-    {
-      key: "2",
-      label: "Basic Egg",
-      type: "egg",
-      level: 0,
-      fn: () => perform(() => useItem(s, "egg")),
-      count: s.inventory.egg,
-    },
-    {
-      key: "3",
-      label: "Field Dice",
-      type: "bag",
-      level: 2,
-      fn: () => perform(() => useItem(s, "booster")),
-      count: s.inventory.booster,
-    },
-    {
-      key: "4",
-      label: "Micro-Converter",
-      type: "bag",
-      level: 1,
-      fn: () => perform(() => useItem(s, "converter")),
-      count: s.inventory.converter,
-    },
-    {
-      key: "5",
-      label: "Treat",
-      type: "bag",
-      level: 0,
-      fn: () => perform(() => feed(s, s.bees[0].id)),
-      count: s.inventory.treat,
-    },
-    {
-      key: "6",
-      label: "Royal Jelly",
-      type: "egg",
-      level: 2,
-      fn: () => perform(() => reroll(s, s.bees[0].id)),
-      count: s.inventory.jelly,
-    },
-  ];
   return (
-    <div className={`hud ${menu ? "menu-is-open" : ""}`}>
+    <div
+      className={`hud ${menu ? "menu-is-open" : ""} ${shopContext ? "in-shop" : ""}`}
+    >
+      <h1 className="sr-only">Bee Swarm Simulator</h1>
       <header className="top-hud">
-        <div className="brand">
-          <BeeIcon size={30} />
-          <div>
-            <h1>Bee Swarm Simulator</h1>
-            <small>Browser recreation</small>
-          </div>
-        </div>
         <div className="resource-bar">
           <div className="resource honey">
-            <HoneyIcon />
-            <div>
-              <span>Honey</span>
-              <strong data-testid="honey">{number(s.honey)}</strong>
-            </div>
+            <span className="resource-name">Honey</span>
+            <strong data-testid="honey">
+              {Math.floor(s.honey).toLocaleString()}
+            </strong>
           </div>
           <div className="resource pollen">
+            <span className="resource-name">Pollen</span>
             <div className="capacity-track">
               <i
                 style={{
@@ -133,103 +82,72 @@ export default function HUD() {
                 }}
               />
             </div>
-            <div className="pollen-content">
-              <span>Pollen</span>
-              <b>
-                <span data-testid="pollen">{number(s.pollen)}</span> /{" "}
-                {number(s.capacity)}
-              </b>
-            </div>
+            <b>
+              <span data-testid="pollen">
+                {Math.floor(s.pollen).toLocaleString()}
+              </span>
+              /{Math.floor(s.capacity).toLocaleString()}
+            </b>
           </div>
         </div>
-        <div className="top-actions">
-          <button
-            className="swarm-button"
-            onClick={() => open("hive")}
-            aria-label="Open hive"
-          >
-            <BeeIcon size={26} />
-            <b data-testid="bee-count">{s.bees.length}</b>
-          </button>
-          <button
-            className="round-button"
-            aria-label="Open settings"
-            onClick={() => open("settings")}
-          >
-            ⚙
-          </button>
-        </div>
       </header>
+      <div className="system-buttons">
+        <button aria-label="Open hive" onClick={() => open("hive")}>
+          <BeeIcon size={22} />
+          <b data-testid="bee-count">{s.bees.length}</b>
+        </button>
+        <button aria-label="Open settings" onClick={() => open("settings")}>
+          ☰
+        </button>
+      </div>
+      <div className="buffs">
+        {s.buffs.map((b) => (
+          <div
+            key={b.kind}
+            title={`${abilityInfo(b.kind).name}: ${Math.ceil(b.remaining)}s`}
+          >
+            <TokenIcon kind={b.kind} size={26} />
+            <span>×{Number(b.value.toFixed(2))}</span>
+          </div>
+        ))}
+      </div>
       <nav className="side-toolbar" aria-label="Game menus">
         {[
-          { menu: "inventory", icon: "▣", label: "Inventory", key: "TAB" },
-          { menu: "quests", icon: "!", label: "Quests", key: "Q" },
-          { menu: "bees", icon: "bee", label: "Bees", key: "B" },
-          { menu: "hive", icon: "⬡", label: "Hive", key: "H" },
-          { menu: "map", icon: "⌁", label: "Map", key: "M" },
-          { menu: "settings", icon: "⚙", label: "Settings", key: "ESC" },
+          { menu: "inventory", label: "Inventory", icon: "inventory" },
+          { menu: "quests", label: "Quests", icon: "quests" },
+          { menu: "bees", label: "Bees", icon: "bees" },
+          { menu: "hive", label: "Hive", icon: "hive" },
+          { menu: "settings", label: "Settings", icon: "settings" },
+          { menu: "map", label: "Map", icon: "map" },
+          { menu: "badges", label: "Badges", icon: "hive" },
         ].map((t) => (
           <button
             key={t.menu}
-            onClick={() => open(t.menu as Menu)}
-            title={`${t.label} (${t.key})`}
+            title={t.label}
             aria-label={`Show ${t.label.toLowerCase()}`}
+            className={menu === t.menu ? "active" : ""}
+            onClick={() => open(menu === t.menu ? null : (t.menu as Menu))}
           >
-            <span>{t.icon === "bee" ? <BeeIcon size={32} /> : t.icon}</span>
-            <small>{t.label}</small>
+            <MenuIcon kind={t.icon} />
           </button>
         ))}
+        <button
+          title="Nearby shop"
+          aria-label="Open nearby shop"
+          onClick={() => {
+            if (near && ["shop", "eggs", "tickets", "guild"].includes(near.kind))
+              interact();
+            else
+              perform(() => {
+                s.notification =
+                  "Walk to a shop and press E to browse its items.";
+                s.noticeId++;
+              });
+          }}
+        >
+          <MenuIcon kind="shop" />
+        </button>
       </nav>
-      <aside className="quest-tracker">
-        <h2>
-          Quests{" "}
-          <button
-            onClick={() => open("quests")}
-            aria-label="Open quest journal"
-          >
-            +
-          </button>
-        </h2>
-        {Object.entries(s.accepted).length ? (
-          Object.entries(s.accepted)
-            .slice(0, 3)
-            .map(([id, progress]) => {
-              const q = QUESTS.find((q) => q.id === id)!;
-              return (
-                <button
-                  key={id}
-                  className="tracked-quest"
-                  onClick={() => open("quests")}
-                >
-                  <b>
-                    {PLACES.find((p) => p.id === q.npc)?.name}: {q.name}
-                  </b>
-                  {q.objectives.map((o, i) => (
-                    <div key={i}>
-                      <span>
-                        {o.label}: {number(progress[i])}/{number(o.amount)}
-                      </span>
-                      <div className="progress">
-                        <i
-                          style={{
-                            width: `${(progress[i] / o.amount) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </button>
-              );
-            })
-        ) : (
-          <p>
-            Talk to Black Bear near Dandelion Field to get your first quest.
-            <br />
-            <br />
-            Collect pollen, make honey, and grow your swarm.
-          </p>
-        )}
-      </aside>
       <aside className="right-hud">
         <div className="field-location" data-testid="scene-status">
           {field?.name ?? "Hive Grounds"}
@@ -250,16 +168,6 @@ export default function HUD() {
         </div>
         <small className="save-label">{saveStatus || "Autosave enabled"}</small>
       </aside>
-      <div className="buffs">
-        {s.buffs.map((b) => (
-          <div key={b.kind}>
-            <b>
-              {b.kind} ×{b.value}
-            </b>
-            <span>{Math.ceil(b.remaining)}s</span>
-          </div>
-        ))}
-      </div>
       {s.challenge && (
         <div className="challenge-banner">
           Clover Challenge: {number(s.challenge.gathered)} /{" "}
@@ -279,16 +187,14 @@ export default function HUD() {
               })
             }
           >
-            <kbd>F</kbd> Stop Making Honey
+            <kbd>F</kbd>Stop Making Honey
           </button>
         ) : near ? (
           <button className="interaction" onClick={interact}>
             <kbd>E</kbd>
             {near.kind === "npc"
               ? `Talk to ${near.name}`
-              : near.kind === "shop" ||
-                  near.kind === "eggs" ||
-                  near.kind === "tickets"
+              : ["shop", "eggs", "tickets", "guild"].includes(near.kind)
                 ? `Open ${near.name}`
                 : near.name}
           </button>
@@ -312,47 +218,31 @@ export default function HUD() {
         ) : null}
       </div>
       <footer className="bottom-hud">
-        <div className="control-hints">
-          WASD · Move &nbsp; Space · Jump &nbsp; Hold click · Collect
-          <br />
-          Right-drag · Camera &nbsp; Scroll · Zoom
-        </div>
         <nav className="hotbar" aria-label="Item hotbar">
-          {slots.map((slot, i) => (
-            <button
-              className={i === 0 ? "selected-tool" : ""}
-              key={slot.key}
-              onClick={slot.fn}
-              title={slot.label}
-              aria-label={slot.label}
-            >
-              <span className="hotkey">{slot.key}</span>
-              <GearArt type={slot.type} level={slot.level} />
-              {slot.count !== undefined && (
-                <b className="item-count">{slot.count}</b>
-              )}
-            </button>
-          ))}
-          {[
-            { key: "7", label: "Inventory", icon: "▣", menu: "inventory" },
-            { key: "8", label: "Hive", icon: "⬡", menu: "hive" },
-            { key: "9", label: "Bees", icon: "bee", menu: "bees" },
-            { key: "0", label: "Map", icon: "⌁", menu: "map" },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => open(t.menu as Menu)}
-              title={t.label}
-              aria-label={t.label}
-            >
-              <span className="hotkey">{t.key}</span>
-              {t.icon === "bee" ? (
-                <BeeIcon size={32} />
-              ) : (
-                <span className="hotbar-icon">{t.icon}</span>
-              )}
-            </button>
-          ))}
+          <button aria-label={tool.name} title={`${tool.name} · Fixed tool slot`} className="selected-tool" data-hotbar-slot="1">
+            <span className="hotkey">1</span><GearArt type="tool" level={Number(s.tool.split('-')[1])} />
+          </button>
+          {s.hotbar.map((item, index) => {
+            const slot = index + 2;
+            const label = item ? ITEM_NAMES[item] ?? item : `Empty slot ${slot === 10 ? 0 : slot}`;
+            return <button key={slot} data-hotbar-slot={slot} aria-label={label}
+              title={`${label} · Drag an inventory item here${item ? ' · Right-click to clear' : ''}`}
+              draggable={!!item && (s.inventory[item] ?? 0) > 0}
+              onDragStart={event => item && beginItemDrag(event, item)} onDragEnd={endItemDrag}
+              onDragOver={event => { if (useItemDrag.getState().item) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; event.currentTarget.classList.add('drop-hover'); } }}
+              onDragLeave={event => event.currentTarget.classList.remove('drop-hover')}
+              onDrop={event => {
+                event.preventDefault(); event.currentTarget.classList.remove('drop-hover');
+                const item = useItemDrag.getState().item;
+                if (item && assignHotbar(s, slot, item)) { useGame.getState().refresh(); useGame.getState().save(); }
+                endItemDrag();
+              }}
+              onContextMenu={event => { event.preventDefault(); assignHotbar(s, slot, null); useGame.getState().refresh(); useGame.getState().save(); }}
+              onClick={() => activateHotbar(slot)}>
+              <span className="hotkey">{slot === 10 ? 0 : slot}</span>
+              {item && <>{['egg', 'jelly', 'treat', 'starTreat', 'converter', 'booster', 'ticket'].includes(item) ? <ItemIcon id={item} /> : <MaterialIcon kind={item} size={33} />}<b className="item-count">{number(s.inventory[item] ?? 0)}</b></>}
+            </button>;
+          })}
         </nav>
       </footer>
       <span className="sr-only" data-testid="player-height">

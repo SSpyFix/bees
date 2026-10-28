@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "map:build": "node scripts/build-map-glb.mjs && node scripts/build-map-metadata.mjs",
+    "test:map-geometry": "node --test scripts/map-geometry.test.mjs scripts/map-cleanup.test.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.6",

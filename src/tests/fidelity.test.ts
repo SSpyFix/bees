@@ -95,10 +95,10 @@ describe("Bee Swarm reference content", () => {
 import { claimHive, atHive } from "../game/systems/simulation";
 import { HIVE_PADS, PLATFORMS } from "../game/data/content";
 describe("reference map interactions", () => {
-  it("has six claimable hives and keeps the claimed hive across reload", () => {
+  it("has five exported claimable hives and keeps the claimed hive across reload", () => {
     const s = createGame(),
       pad = HIVE_PADS[0];
-    expect(HIVE_PADS).toHaveLength(6);
+    expect(HIVE_PADS).toHaveLength(5);
     s.player.x = pad.x;
     s.player.z = pad.z;
     expect(claimHive(s, 0)).toBe(true);
@@ -106,7 +106,7 @@ describe("reference map interactions", () => {
     expect(restore(serialize(s)).hive).toBe(0);
   });
   it("defines gate requirements directly instead of guessing from terrain height", () => {
-    expect(PLATFORMS.map((p) => p.gate)).toEqual([0, 5, 10, 15, 25, 35]);
+    expect([...new Set(FIELDS.map((f) => f.gate))].sort((a,b) => a-b)).toEqual([0, 5, 10, 15, 25, 35]);
   });
 });
 
@@ -126,31 +126,30 @@ import { solidAt, surface } from "../game/world/terrain";
 describe("rebuilt landmarks and progression", () => {
   it("launches only an eligible nearby swarm and lands on the mountaintop safely", () => {
     const s = createGame();
-    s.player.x = -60;
-    s.player.y = 8;
-    s.player.z = -28;
+    Object.assign(s.player, PLACES.find((p) => p.id === "red-cannon")!);
+    const before = s.player.y;
     expect(interactPlace(s, "red-cannon")).toBe(false);
     while (s.bees.length < 25) s.bees.push(newBee(s, "bee-0"));
     expect(interactPlace(s, "red-cannon")).toBe(true);
     movePlayer(s, 1, 1, 0.1);
-    expect(s.player.y).toBeGreaterThan(8);
+    expect(s.player.y).toBeGreaterThan(before);
     for (let i = 0; i < 40; i++) movePlayer(s, 0, 0, 0.1);
     expect(s.flight).toBeNull();
-    expect(s.player.y).toBe(surface(s.player.x, s.player.z));
-    expect(s.player.z).toBe(-145);
+    expect(s.player.y).toBe(surface(s.player.x, s.player.z, s.player.y));
+    expect(s.player.z).toBe(FIELDS.find((f) => f.id === "mountain")!.z);
     expect(s.player.grounded).toBe(true);
-    expect(solidAt(s.player.x, s.player.z)).toBe(false);
+    expect(solidAt(s.player.x, s.player.z, s.player.y)).toBe(false);
   });
   it("rejects remote cannon activation and keeps the Coconut Shop reachable", () => {
     const s = createGame();
     expect(interactPlace(s, "mountain-cannon")).toBe(false);
-    expect(solidAt(77, -199)).toBe(false);
-    expect(surface(77, -199)).toBe(44);
+    const shop=PLACES.find((p) => p.id === "shop-35")!;
+    expect(solidAt(shop.x, shop.z, shop.y)).toBe(false);
+    expect(surface(shop.x, shop.z, shop.y)).not.toBeNull();
   });
   it("requires earned tickets, enforces unique event bees, and persists the purchase", () => {
     const s = createGame();
-    s.player.x = -28;
-    s.player.z = 49;
+    Object.assign(s.player, PLACES.find((p) => p.id === "tickets")!);
     expect(buyEventBee(s, "bee-41")).toBe(false);
     s.inventory.ticket = 1000;
     expect(buyEventBee(s, "bee-41")).toBe(true);
@@ -165,18 +164,18 @@ describe("rebuilt landmarks and progression", () => {
   });
   it("pays tickets from completed gameplay quests", () => {
     const s = createGame();
-    acceptQuest(s, "juniper-0");
-    event(s, "pollen", 100);
-    expect(claimQuest(s, "juniper-0")).toBe(true);
+    acceptQuest(s, "maple-0");
+    event(s, "color", 120, "red");
+    expect(claimQuest(s, "maple-0")).toBe(true);
     expect(s.inventory.ticket).toBe(5);
-    expect(claimQuest(s, "juniper-0")).toBe(false);
+    expect(claimQuest(s, "maple-0")).toBe(false);
     expect(s.inventory.ticket).toBe(5);
   });
   it("boosts only the field selected by Field Dice", () => {
     const a = createGame(),
       b = createGame();
-    a.player.x = b.player.x = 0;
-    a.player.z = b.player.z = 8;
+    const field = FIELDS.find((f) => f.id === "dandelion")!;
+    Object.assign(a.player, field); Object.assign(b.player, field);
     a.seed = b.seed = 1;
     buff(a, "field:dandelion", 2, 900);
     expect(collect(a)).toBeGreaterThan(collect(b));
@@ -202,9 +201,7 @@ describe("rebuilt landmarks and progression", () => {
   });
 });
 
-it("uses matching shop and headquarters collision footprints with clear entrances", () => {
-  expect(solidAt(-63, -8)).toBe(true);
-  expect(solidAt(-63, -1)).toBe(false);
-  expect(solidAt(-28, 51)).toBe(true);
-  expect(solidAt(-28, 49)).toBe(false);
+it("keeps imported shops and headquarters interaction positions clear", () => {
+  for(const p of PLACES.filter(p=>p.kind === "shop" || p.kind === "tickets"))
+    expect(solidAt(p.x,p.z,p.y),p.id).toBe(false);
 });

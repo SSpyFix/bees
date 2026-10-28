@@ -31,6 +31,188 @@ export function HoneyIcon() {
     </svg>
   );
 }
+export function ItemIcon({ kind, size = 48 }: { kind: string; size?: number }) {
+  const egg = kind.toLowerCase().includes("egg");
+  const color =
+    kind === "silverEgg"
+      ? "#d8e1e9"
+      : kind === "goldEgg"
+        ? "#ffd533"
+        : kind === "diamondEgg"
+          ? "#77deff"
+          : kind === "mythicEgg"
+            ? "#d895f8"
+            : kind === "egg"
+              ? "#cb994c"
+              : kind === "starTreat" || kind === "starJelly"
+                ? "#ffdc3e"
+                : kind === "strawberry" || kind === "redExtract"
+                  ? "#ed4445"
+                  : kind === "blueberry" || kind === "blueExtract"
+                    ? "#4384ec"
+                    : kind === "gumdrops"
+                      ? "#d77aea"
+                      : "#f2cf67";
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      width={size}
+      height={size}
+      aria-hidden="true"
+      className="item-icon"
+    >
+      {egg ? (
+        <>
+          <path
+            d="M51 39c0 21-38 21-38 0C13 22 25 6 32 6s19 16 19 33Z"
+            fill={color}
+            stroke="#3a3a3a"
+            strokeWidth="2"
+          />
+          <path
+            d="M23 20c-4 6-6 11-6 17"
+            stroke="#fff"
+            strokeWidth="4"
+            opacity=".5"
+            fill="none"
+          />
+          {kind === "diamondEgg" && (
+            <path d="m32 16 10 17-10 19-10-19Z" fill="#fff" opacity=".65" />
+          )}
+        </>
+      ) : kind === "treat" || kind === "starTreat" ? (
+        <>
+          <rect
+            x="10"
+            y="15"
+            width="44"
+            height="35"
+            rx="8"
+            fill={kind === "treat" ? "#ad7b4e" : color}
+            stroke="#684c31"
+            strokeWidth="2"
+          />
+          {kind === "starTreat" ? (
+            <path
+              d="m32 20 4 8 9 1-7 6 2 9-8-4-8 4 2-9-7-6 9-1Z"
+              fill="#fff8b7"
+            />
+          ) : (
+            [20, 32, 44].map((x, i) => (
+              <circle
+                key={x}
+                cx={x}
+                cy={i % 2 ? 38 : 28}
+                r="3"
+                fill="#724e32"
+              />
+            ))
+          )}
+        </>
+      ) : kind === "jelly" || kind === "starJelly" ? (
+        <>
+          <rect
+            x="13"
+            y="13"
+            width="38"
+            height="41"
+            rx="10"
+            fill={kind === "jelly" ? "#729afa" : color}
+            stroke="#333"
+            strokeWidth="2"
+          />
+          <rect
+            x="20"
+            y="5"
+            width="24"
+            height="11"
+            fill="#eee"
+            stroke="#333"
+            strokeWidth="2"
+          />
+          <path d="m22 29 7 3 3-10 4 10 7-3-3 13H25Z" fill="#fff6a7" />
+        </>
+      ) : kind === "ticket" ? (
+        <>
+          <path
+            d="M7 15h50v11a6 6 0 0 0 0 12v11H7V38a6 6 0 0 0 0-12Z"
+            fill="#ffda32"
+            stroke="#6d5821"
+            strokeWidth="2"
+          />
+          <path
+            d="M44 18v28"
+            stroke="#9b7f2d"
+            strokeWidth="2"
+            strokeDasharray="3 3"
+          />
+          <text
+            x="25"
+            y="40"
+            textAnchor="middle"
+            fontSize="25"
+            fontWeight="bold"
+            fill="#7a5e12"
+          >
+            T
+          </text>
+        </>
+      ) : kind === "booster" ? (
+        <>
+          <rect
+            x="10"
+            y="10"
+            width="44"
+            height="44"
+            rx="7"
+            fill="#fff"
+            stroke="#666"
+            strokeWidth="2"
+          />
+          {[
+            [21, 21],
+            [43, 21],
+            [32, 32],
+            [21, 43],
+            [43, 43],
+          ].map(([x, y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="4" fill="#333" />
+          ))}
+        </>
+      ) : kind === "converter" ? (
+        <>
+          <rect
+            x="12"
+            y="10"
+            width="40"
+            height="45"
+            rx="3"
+            fill="#f4bf42"
+            stroke="#555"
+            strokeWidth="2"
+          />
+          <path d="m35 15-15 22h12l-3 14 17-23H33Z" fill="#fff8c8" />
+        </>
+      ) : (
+        <>
+          <circle
+            cx="32"
+            cy="33"
+            r="22"
+            fill={color}
+            stroke="#444"
+            strokeWidth="2"
+          />
+          <path
+            d="m32 18 5 9 10 2-7 7 1 10-9-5-9 5 1-10-7-7 10-2Z"
+            fill="#fff"
+            opacity=".65"
+          />
+        </>
+      )}
+    </svg>
+  );
+}
 export function GearArt({ type, level = 0 }: { type: string; level?: number }) {
   const color = ["#d4ab61", "#bfcdb4", "#94bcc0", "#cd9c93"][level % 4];
   return (

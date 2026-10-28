@@ -4,7 +4,7 @@ export default defineConfig({
   plugins: [react()],
   // Relative assets work on GitHub project Pages and custom domains.
   base: "./",
-  test: { include: ["src/tests/**/*.test.ts"] },
+  test: { include: ["src/tests/**/*.test.ts"], setupFiles: ["scripts/setup-map.mjs"] },
   server: { port: 5173 },
   build: {
     chunkSizeWarningLimit: 1200,

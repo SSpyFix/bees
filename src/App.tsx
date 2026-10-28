@@ -3,6 +3,7 @@ import { useGame } from "./game/systems/store";
 import Scene from "./game/player/Scene";
 import HUD from "./components/HUD";
 import Menus from "./components/Menus";
+import ItemDropConfirmation from './components/ItemDropConfirmation';
 class SceneBoundary extends Component<
   { children: ReactNode },
   { error: boolean }
@@ -38,6 +39,7 @@ export default function App() {
       <div className="scene-vignette" />
       <HUD />
       <Menus />
+      <ItemDropConfirmation />
     </main>
   );
 }

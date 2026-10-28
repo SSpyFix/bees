@@ -1,3 +1,4 @@
+import { beeAppearance } from "../bees/appearance";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -65,6 +66,7 @@ export function Label({
   color = "#fff5d5",
   background = "#315742",
   size = 0.85,
+  plain = false,
 }: {
   text: string;
   position: [number, number, number];
@@ -72,31 +74,48 @@ export function Label({
   color?: string;
   background?: string;
   size?: number;
+  plain?: boolean;
 }) {
   const map = useMemo(() => {
     const c = document.createElement("canvas");
-    c.width = 1024;
     c.height = 128;
     const x = c.getContext("2d")!;
-    x.fillStyle = background;
-    x.beginPath();
-    x.rect(2, 2, 1020, 124);
-    x.fill();
-    x.strokeStyle = color + "55";
-    x.lineWidth = 3;
-    x.stroke();
-    x.fillStyle = color;
-    x.font = "bold 49px Arial";
+    x.font = plain ? "bold 80px Arial" : "bold 49px Arial";
+    c.width = plain
+      ? Math.max(96, Math.ceil(x.measureText(text).width + 32))
+      : 1024;
+    x.font = plain ? "bold 80px Arial" : "bold 49px Arial";
+    if (!plain) {
+      x.fillStyle = background;
+      x.fillRect(2, 2, c.width - 4, 124);
+      x.strokeStyle = color + "55";
+      x.lineWidth = 3;
+      x.strokeRect(2, 2, c.width - 4, 124);
+    }
     x.textAlign = "center";
     x.textBaseline = "middle";
-    x.fillText(text, 512, 66, 970);
+    if (plain) {
+      x.strokeStyle = "#153528";
+      x.lineWidth = 7;
+      x.lineJoin = "round";
+      x.strokeText(text, c.width / 2, 66);
+    }
+    x.fillStyle = color;
+    x.fillText(text, c.width / 2, 66, plain ? c.width - 24 : 970);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
-  }, [text, color, background]);
+  }, [text, color, background, plain]);
   useEffect(() => () => map.dispose(), [map]);
   return (
-    <sprite position={position} scale={[width, size, 1]}>
+    <sprite
+      position={position}
+      scale={[
+        plain ? Math.min(width, (size * map.image.width) / 128) : width,
+        size,
+        1,
+      ]}
+    >
       <spriteMaterial map={map} transparent depthWrite={false} />
     </sprite>
   );
@@ -277,11 +296,13 @@ export function BeeModel({
   rarity = "Common",
   face = "basic",
   animate = true,
+  gifted = false,
 }: {
   color?: string;
   rarity?: string;
   face?: string;
   animate?: boolean;
+  gifted?: boolean;
 }) {
   const wings = useRef<THREE.Group>(null);
   const texture = useMemo(() => {
@@ -313,9 +334,29 @@ export function BeeModel({
       );
   });
   return (
-    <group scale={0.8}>
+    <group scale={face === "tadpole" || face === "baby" ? 0.68 : 0.8}>
+      {gifted && (
+        <>
+          <mesh position={[0, 1.15, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.85, 0.075, 6, 20]} />
+            <meshBasicMaterial color="#ffdf30" />
+          </mesh>
+          <Label
+            text="★"
+            plain
+            position={[0, 1.85, 0]}
+            size={0.65}
+            width={1.4}
+            color="#ffdc35"
+          />
+        </>
+      )}
       <Box scale={[1.25, 1.25, 1.25]} color={color} />
-      <Box position={[0, 0, -0.3]} scale={[1.27, 1.27, 0.2]} color="#252525" />
+      <Box
+        position={[0, 0, -0.3]}
+        scale={[1.27, 1.27, 0.2]}
+        color={beeAppearance(face).stripe}
+      />
       <mesh position={[0, 0, 0.632]}>
         <planeGeometry args={[1.25, 1.25]} />
         <meshBasicMaterial map={texture} toneMapped={false} />
@@ -333,28 +374,6 @@ export function BeeModel({
           </mesh>
         ))}
       </group>
-      {["demon", "vicious"].includes(face) &&
-        [-0.4, 0, 0.4].map((x) => (
-          <mesh key={x} position={[x, 0.8, 0]}>
-            <coneGeometry args={[0.16, 0.5, 4]} />
-            <meshStandardMaterial color="#1b2330" />
-          </mesh>
-        ))}
-      {face === "bear" &&
-        [-0.52, 0.52].map((x) => (
-          <Ball
-            key={x}
-            position={[x, 0.6, 0]}
-            scale={[0.25, 0.25, 0.2]}
-            color="#725030"
-          />
-        ))}
-      {face === "buoyant" && (
-        <mesh position={[0, 1.5, 0]}>
-          <sphereGeometry args={[0.6, 8, 6]} />
-          <meshStandardMaterial color="#5379ce" />
-        </mesh>
-      )}
       {rarity === "Mythic" && (
         <Box
           position={[0, -0.66, 0]}
@@ -588,14 +607,21 @@ export function Bear({
 }
 export function flowerGeometry() {
   const shape = new THREE.Shape();
-  for (let i = 0; i < 20; i++) {
-    const angle = (i * Math.PI) / 10,
-      r = i % 4 === 0 ? 0.23 : i % 2 === 0 ? 0.53 : 0.44;
-    const x = Math.cos(angle) * r,
-      y = Math.sin(angle) * r;
-    if (i === 0) shape.moveTo(x, y);
-    else shape.lineTo(x, y);
-  }
+  const points = [
+    [-0.15, -0.48],
+    [0.15, -0.48],
+    [0.15, -0.15],
+    [0.48, -0.15],
+    [0.48, 0.15],
+    [0.15, 0.15],
+    [0.15, 0.48],
+    [-0.15, 0.48],
+    [-0.15, 0.15],
+    [-0.48, 0.15],
+    [-0.48, -0.15],
+    [-0.15, -0.15],
+  ];
+  points.forEach(([x, y], i) => (i ? shape.lineTo(x, y) : shape.moveTo(x, y)));
   shape.closePath();
   const g = new THREE.ShapeGeometry(shape);
   g.rotateX(-Math.PI / 2);
