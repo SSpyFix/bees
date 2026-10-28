@@ -1,5 +1,10 @@
-import type { BeeDefinition } from "./bees";
+import { BEES, type BeeDefinition } from "./bees";
 export type AbilityDefinition = {
+  icon?: string;
+  duration?: number;
+  cap?: number;
+  increment?: number;
+  base?: number;
   name: string;
   description: string;
   color: string;
@@ -369,7 +374,7 @@ const roster: string[][] = [
   ["impale", "blue-bomb-plus"],
   ["white-boost", "rain-cloud", "tornado"],
 ];
-export function beeAbilities(bee: BeeDefinition, gifted: boolean): string[] {
+export function beeAbilities(bee: BeeDefinition, gifted = false): string[] {
   const list = (roster[Number(bee.id.slice(4))] ?? []).filter(
     (id) => !ABILITIES[id].gifted || gifted,
   );
@@ -394,3 +399,144 @@ export const abilityNames = (bee: BeeDefinition, gifted = false) =>
   beeAbilities(bee, gifted)
     .map((id) => ABILITIES[id].name)
     .join(", ") || "None";
+
+const LEGACY_ABILITIES: Record<string, Omit<AbilityDefinition, "description">> = {
+  red: {
+    name: "Red Boost",
+    color: "#e72c31",
+    icon: "R",
+    duration: 15,
+    cap: 10,
+    increment: 0.2,
+    base: 1,
+  },
+  blue: {
+    name: "Blue Boost",
+    color: "#246ded",
+    icon: "B",
+    duration: 15,
+    cap: 10,
+    increment: 0.2,
+    base: 1,
+  },
+  white: {
+    name: "White Boost",
+    color: "#e6e8ed",
+    icon: "W",
+    duration: 15,
+    cap: 10,
+    increment: 0.2,
+    base: 1,
+  },
+  haste: {
+    name: "Haste",
+    color: "#f2e78e",
+    icon: "»",
+    duration: 20,
+    cap: 10,
+    increment: 0.1,
+    base: 1,
+  },
+  focus: {
+    name: "Focus",
+    color: "#8ae587",
+    icon: "+",
+    duration: 20,
+    cap: 10,
+    increment: 0.03,
+    base: 0,
+  },
+  rage: {
+    name: "Rage",
+    color: "#e94128",
+    icon: "!",
+    duration: 45,
+    cap: 4,
+    increment: 1,
+    base: 0,
+  },
+  melody: {
+    name: "Melody",
+    color: "#c5d8f3",
+    icon: "♪",
+    duration: 30,
+    cap: 1,
+    increment: 1,
+    base: 0,
+  },
+  babyLove: {
+    name: "Baby Love",
+    color: "#ffb3d3",
+    icon: "♥",
+    duration: 30,
+    cap: 1,
+    increment: 1,
+    base: 1,
+  },
+  bombCombo: {
+    name: "Bomb Combo",
+    color: "#e7dfc6",
+    icon: "✹",
+    duration: 5,
+    cap: 10,
+    increment: 0.25,
+    base: 1,
+  },
+  inspire: {
+    name: "Inspire",
+    color: "#fff17e",
+    icon: "★",
+    duration: 5,
+    cap: 50,
+    increment: 1,
+    base: 1,
+  },
+  pollen: { name: "Pollen Boost", color: "#f8e58e", icon: "✿" },
+  convert: { name: "Conversion Boost", color: "#ffd733", icon: "↻" },
+  critical: { name: "Precision", color: "#fb748b", icon: "◎" },
+  honey: { name: "Honey Gift", color: "#ffce27", icon: "⬡" },
+  bomb: { name: "Buzz Bomb", color: "#e3e5dc", icon: "✹" },
+  bombPlus: { name: "Buzz Bomb+", color: "#e3e5dc", icon: "✹+" },
+  redBomb: { name: "Red Bomb", color: "#ff5148", icon: "✹" },
+  redBombPlus: { name: "Red Bomb+", color: "#ff5148", icon: "✹+" },
+  blueBomb: { name: "Blue Bomb", color: "#50a5ff", icon: "✹" },
+  blueBombPlus: { name: "Blue Bomb+", color: "#50a5ff", icon: "✹+" },
+  link: { name: "Token Link", color: "#fff9cf", icon: "∞" },
+  bubble: { name: "Bubble", color: "#91e6ff", icon: "○" },
+  flame: { name: "Flame", color: "#ff8b23", icon: "♨" },
+  pollenMark: { name: "Pollen Mark", color: "#8fe4ac", icon: "✿" },
+  honeyMark: { name: "Honey Mark", color: "#ffdc57", icon: "⬡" },
+  beam: { name: "Beamstorm", color: "#fffac1", icon: "ϟ" },
+  goo: { name: "Gumdrop Barrage", color: "#eda4ff", icon: "●" },
+  impale: { name: "Impale", color: "#77b8eb", icon: "▲" },
+  tornado: { name: "Tornado", color: "#d1f5fb", icon: "≋" },
+  bearMorph: {
+    name: "Bear Morph",
+    color: "#d49b67",
+    icon: "ʕ",
+    duration: 30,
+    cap: 1,
+    increment: 1,
+    base: 1,
+  },
+  ticket: { name: "Ticket", color: "#f9db43", icon: "T" },
+  treat: { name: "Treat", color: "#b78252", icon: "•" },
+  "extract:red": { name: "Red Extract", color: "#e72c31", icon: "R" },
+  "extract:blue": { name: "Blue Extract", color: "#246ded", icon: "B" },
+  oil: { name: "Oil", color: "#f6d26b", icon: "»" },
+  enzymes: { name: "Enzymes", color: "#f4c95d", icon: "↻" },
+  glue: { name: "Glue", color: "#eac8fd", icon: "●" },
+  stinger: { name: "Stinger", color: "#819bc6", icon: "▲" },
+};
+
+export type AbilityInfo = AbilityDefinition & { icon: string };
+Object.assign(ABILITIES.focus, { base: 1 });
+Object.assign(ABILITIES.rage, { base: 1, cap: 3 });
+Object.assign(ABILITIES.melody, { base: 1 });
+Object.assign(ABILITIES["baby-love"], { duration: 30, cap: 1, increment: 1, base: 1 });
+Object.assign(ABILITIES["bear-morph"], { duration: 30, cap: 1, increment: 1, base: 1 });
+export const ABILITY_ALIASES: Record<string, string> = { red: "red-boost", blue: "blue-boost", white: "white-boost", bomb: "buzz-bomb", bombPlus: "buzz-bomb-plus", blueBomb: "blue-bomb", blueBombPlus: "blue-bomb-plus", redBomb: "red-bomb", redBombPlus: "red-bomb-plus", link: "token-link", babyLove: "baby-love", bearMorph: "bear-morph", pollenMark: "pollen-mark", honeyMark: "honey-mark", beam: "beamstorm", goo: "gumdrop-barrage" };
+for (const [id, info] of Object.entries(LEGACY_ABILITIES)) ABILITIES[id] = Object.assign({ description: "" }, info, ABILITIES[id]);
+export const abilityInfo = (kind: string): AbilityInfo => Object.assign({ icon: LEGACY_ABILITIES[kind]?.icon ?? "✿", name: kind.startsWith("field:") ? `${kind.slice(6)} Field Boost` : kind, description: "", color: "#ffe976" }, ABILITIES[ABILITY_ALIASES[kind] ?? kind]);
+// Compatibility for species summaries; spawning uses beeAbilities and gifted gating.
+export const SPECIES_ABILITIES: Record<string, string[]> = Object.fromEntries(BEES.map(bee => [bee.face, beeAbilities(bee, false)]));

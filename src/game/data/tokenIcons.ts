@@ -1,6 +1,10 @@
 /** Locally drawn token symbols based on the supplied ability-icon reference. */
 const aliases: Record<string, string> = {
   bomb: "buzz-bomb",
+  bombPlus: "buzz-bomb-plus", redBomb: "red-bomb", redBombPlus: "red-bomb-plus",
+  blueBomb: "blue-bomb", blueBombPlus: "blue-bomb-plus", babyLove: "baby-love",
+  pollenMark: "pollen-mark", honeyMark: "honey-mark", beam: "beamstorm",
+  goo: "gumdrop-barrage", bearMorph: "bear-morph", bombCombo: "bomb-combo",
   blue: "blue-boost",
   red: "red-boost",
   white: "white-boost",

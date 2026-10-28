@@ -1,18 +1,20 @@
 import { test, expect } from "@playwright/test";
+import map from "../src/game/data/imported-map.json" with { type: "json" };
 const key = "pollen-peak-save-v2";
 test("HUD converts balloon cargo when the pack is empty", async ({ page }) => {
   await page.addInitScript(
-    (key) =>
+    ({key, mapVersion, position}) =>
       localStorage.setItem(
         key,
         JSON.stringify({
           version: 2,
+          mapVersion, position, hive: 3,
           balloonPollen: 120,
           pollen: 0,
           settings: { quality: "low", muted: true },
         }),
       ),
-    key,
+    {key, mapVersion: map.version, position: {...map.hives[3], z: map.hives[3].z - 5}},
   );
   await page.goto("/");
   const button = page.getByRole("button", { name: /Make Honey/i });
@@ -26,19 +28,20 @@ test("HUD converts balloon cargo when the pack is empty", async ({ page }) => {
 });
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(
-    (key) =>
+    ({key, mapVersion, position}) =>
       localStorage.setItem(
         key,
         JSON.stringify({
           version: 2,
-          honey: 200000000,
+          mapVersion,
+          honey: 2000000000000,
           inventory: { jelly: 1000000, treat: 10 },
-          position: { x: 55, z: 54 },
+          position,
           bees: [{ kind: "bee-26", level: 4, gifted: true }],
           settings: { quality: "low", muted: true },
         }),
       ),
-    key,
+    {key, mapVersion: map.version, position: map.places.eggs},
   );
   await page.goto("/");
   await expect(page.locator('canvas[data-interactive="true"]')).toBeVisible();
@@ -46,13 +49,15 @@ test.beforeEach(async ({ page }) => {
 test("large purchases charge the displayed total and preserve inventory", async ({
   page,
 }) => {
+  await page.evaluate(async position => {
+    const {useGame} = await import("/src/game/systems/store.ts");
+    Object.assign(useGame.getState().game.player, position);
+    useGame.getState().refresh();
+  }, map.places["jelly-shop"]);
   await page.keyboard.press("e");
   await expect(
-    page.getByRole("heading", { name: "Basic Egg Shop", exact: true }),
+    page.getByRole("heading", { name: "Royal Jelly Shop", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "View Royal Jelly", exact: true })
-    .click();
   await page.getByLabel("Purchase quantity").selectOption("1000000");
   const jelly = page.locator(".item-card").filter({
     has: page.getByRole("heading", { name: "Royal Jelly", exact: true }),
@@ -64,8 +69,8 @@ test("large purchases charge the displayed total and preserve inventory", async 
     key,
   );
   expect(saved.inventory.jelly).toBe(2000000);
-  expect(saved.honey).toBe(20000000);
-  await page.screenshot({ path: "/workspace/work/bee-update/bulk-shop.png" });
+  expect(saved.honey).toBe(2000000000000 - 999971500000);
+  await page.screenshot({ path: "test-results/bulk-shop.png" });
 });
 test("reference layout uses compact icon tabs and a narrow left inventory panel", async ({
   page,
@@ -90,10 +95,10 @@ test("gifted status and combined auto-jelly filters are visible and saved", asyn
 }) => {
   await page.keyboard.press("h");
   await expect(
-    page.getByRole("heading", { name: "Gifted Music Bee", exact: true }),
+    page.getByRole("heading", { name: "★ Gifted Music Bee", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".bee-detail")).toContainText("Token Link");
-  await page.screenshot({ path: "/workspace/work/bee-update/gifted-hive.png" });
+  await page.screenshot({ path: "test-results/gifted-hive.png" });
   await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: "Open settings", exact: true })
@@ -169,7 +174,7 @@ test("renders Mythic and Event ability effects without runtime errors", async ({
     useGame.getState().refresh();
   });
   await page.screenshot({
-    path: "/workspace/work/bee-update/ability-effects.png",
+    path: "test-results/ability-effects.png",
   });
   expect(errors).toEqual([]);
 });
@@ -177,9 +182,9 @@ test("renders Mythic and Event ability effects without runtime errors", async ({
 test("keeps the shop behind inventory and supports item browsing and leaving", async ({
   page,
 }) => {
-  await page.keyboard.press("e");
+  await page.evaluate(async () => (await import("/src/game/systems/store.ts")).useGame.getState().open("shop", "shop"));
   await page.getByRole("button", { name: "Next item", exact: true }).click();
-  await expect(page.locator(".shop-detail-card h3")).toHaveText("Treat");
+  await expect(page.locator(".shop-detail-card h3")).toHaveText("Rake");
   await page
     .getByRole("button", { name: "Previous item", exact: true })
     .click();
@@ -190,18 +195,18 @@ test("keeps the shop behind inventory and supports item browsing and leaving", a
     page.getByRole("dialog", { name: "Inventory", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("region", { name: "Basic Egg Shop", exact: true }),
+    page.getByRole("region", { name: "Basic Shop", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Next item", exact: true }),
   ).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({
-    path: "/workspace/work/bee-update/shop-with-inventory.png",
+    path: "test-results/shop-with-inventory.png",
   });
   await page.keyboard.press("Escape");
   await expect(
-    page.getByRole("dialog", { name: "Basic Egg Shop", exact: true }),
+    page.getByRole("dialog", { name: "Basic Shop", exact: true }),
   ).toBeVisible();
   await page.keyboard.press("e");
   await expect(page.getByRole("dialog")).not.toBeVisible();
@@ -217,7 +222,7 @@ test("mobile reference panel stays within the viewport", async ({ page }) => {
   expect(panel!.y + panel!.height).toBeLessThanOrEqual(749);
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({
-    path: "/workspace/work/bee-update/mobile-inventory.png",
+    path: "test-results/mobile-inventory.png",
   });
 });
 
@@ -228,10 +233,10 @@ test("inventory Royal Jelly opens bee selection without spending", async ({
     .getByRole("button", { name: "Show inventory", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Choose bee for Royal Jelly", exact: true })
+    .locator('[data-inventory-item="jelly"]').getByRole("button", {name:"Choose bee", exact:true})
     .click();
   await expect(
-    page.getByRole("dialog", { name: "Your Hive", exact: true }),
+    page.getByRole("dialog", { name: "Use item on bee", exact: true }),
   ).toBeVisible();
   const remaining = await page.evaluate(async () => {
     const { useGame } = await import("/src/game/systems/store.ts");

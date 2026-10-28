@@ -24,7 +24,7 @@ test("renders every reference face without WebGL errors", async ({
   expect(new Set(faces).size).toBe(46);
   await page.getByRole("button", { name: "Music Bee", exact: true }).click();
   await expect(page.locator(".bee-detail h3")).toHaveText("Music Bee");
-  await page.screenshot({ path: "/workspace/work/bee-1.1.1/bee-index.png" });
+  await page.screenshot({ path: "test-results/bee-index.png" });
   await page.evaluate(async () => {
     const { mountBeeGallery } = await import("/tests/appearance-gallery.tsx");
     mountBeeGallery();
@@ -33,7 +33,7 @@ test("renders every reference face without WebGL errors", async ({
   // SVG textures load asynchronously into Three.js; allow their first rendered frame.
   await page.waitForTimeout(700);
   await page.screenshot({
-    path: "/workspace/work/bee-1.1.1/species-models.png",
+    path: "test-results/species-models.png",
   });
   expect(errors).toEqual([]);
   const save = await page.evaluate(() =>

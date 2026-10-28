@@ -50,7 +50,7 @@ export default function AbilityVisual({
     <group
       position={[
         e.x,
-        mark ? (surface(e.x, e.z) ?? e.y) + 0.055 : e.y + 0.12,
+        mark ? (surface(e.x, e.z, e.y) ?? e.y) + 0.055 : e.y + 0.12,
         e.z,
       ]}
     >

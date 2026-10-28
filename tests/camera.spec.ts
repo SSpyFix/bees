@@ -1,13 +1,15 @@
 import { test, expect } from "@playwright/test";
+import map from "../src/game/data/imported-map.json" with { type: "json" };
 test("camera and player keep a stable relative position while walking", async ({
   page,
 }) => {
-  await page.addInitScript(() =>
+  const field = map.fields.find(f => f.id === "dandelion")!;
+  await page.addInitScript(({position, mapVersion}) =>
     localStorage.setItem(
       "pollen-peak-save-v2",
-      JSON.stringify({ version: 2, settings: { quality: "low", muted: true } }),
+      JSON.stringify({ version: 2, mapVersion, position, settings: { quality: "low", muted: true } }),
     ),
-  );
+    {position: field, mapVersion: map.version});
   await page.goto("/");
   await expect(page.locator('canvas[data-interactive="true"]')).toBeVisible();
   await page.waitForTimeout(700);

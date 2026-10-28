@@ -607,14 +607,21 @@ export function Bear({
 }
 export function flowerGeometry() {
   const shape = new THREE.Shape();
-  for (let i = 0; i < 20; i++) {
-    const angle = (i * Math.PI) / 10,
-      r = i % 4 === 0 ? 0.23 : i % 2 === 0 ? 0.53 : 0.44;
-    const x = Math.cos(angle) * r,
-      y = Math.sin(angle) * r;
-    if (i === 0) shape.moveTo(x, y);
-    else shape.lineTo(x, y);
-  }
+  const points = [
+    [-0.15, -0.48],
+    [0.15, -0.48],
+    [0.15, -0.15],
+    [0.48, -0.15],
+    [0.48, 0.15],
+    [0.15, 0.15],
+    [0.15, 0.48],
+    [-0.15, 0.48],
+    [-0.15, 0.15],
+    [-0.48, 0.15],
+    [-0.48, -0.15],
+    [-0.15, -0.15],
+  ];
+  points.forEach(([x, y], i) => (i ? shape.lineTo(x, y) : shape.moveTo(x, y)));
   shape.closePath();
   const g = new THREE.ShapeGeometry(shape);
   g.rotateX(-Math.PI / 2);

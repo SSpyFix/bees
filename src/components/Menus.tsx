@@ -1,24 +1,27 @@
-import TicketShop from "./TicketShop";
-import ShopExperience from "./ShopExperience";
-import InventoryPanel from "./InventoryPanel";
-import BeeAbilities from "./BeeAbilities";
+import type { Menu } from "../game/systems/store";
 import AutoJelly from "./AutoJelly";
-import { abilityNames } from "../game/data/abilities";
-import { giftedStats } from "../game/systems/gifted";
+import BeeAbilities from "./BeeAbilities";
+import ShopExperience from "./ShopExperience";
+import GuildPanel from "./GuildPanel";
+import BadgesPanel from "./BadgesPanel";
+import { SPECIES_ABILITIES, abilityInfo } from "../game/data/abilities";
+import {
+  EGGS,
+  ITEM_NAMES,
+  bondRequired,
+  type EggKind,
+} from "../game/data/progression";
+import InventoryPanel from "./InventoryPanel";
+import TicketShop from "./TicketShop";
 import BeeIndex from "./BeeIndex";
 import { useState } from "react";
-import type { Menu } from "../game/systems/store";
+import importedMap from "../game/data/imported-map.json";
 import { useGame, sound } from "../game/systems/store";
 import {
-  BAGS,
-  BEES,
   FIELDS,
-  GEAR,
   HIVE_PADS,
   PLACES,
-  PLATFORMS,
   QUESTS,
-  RAMPS,
   RARITY_COLORS,
 } from "../game/data/content";
 import {
@@ -26,23 +29,17 @@ import {
   atHive,
   releaseBee,
   beeDefinition,
-  buy,
   buySlot,
-  maxPurchase,
-  makeGifted,
   claimQuest,
-  eggCost,
   feed,
+  giftBee,
   hatch,
-  interactPlace,
   questReady,
   replayQuest,
   reroll,
   slotCost,
-  useItem,
 } from "../game/systems/simulation";
-import { BeeIcon, GearArt, HoneyIcon } from "./Icons";
-import type { Game } from "../game/systems/types";
+import { BeeIcon } from "./Icons";
 export const number = (n: number) =>
   n >= 1e6
     ? `${(n / 1e6).toFixed(1)}m`
@@ -78,10 +75,7 @@ export function QuestCard({
       <h3>{q.name}</h3>
       {allowAccept && <p>{q.dialogue}</p>}
       {q.objectives.map((o, i) => (
-        <div
-          className={`objective quest-objective ${done || (active && s.accepted[id][i] >= o.amount) ? "complete" : ""}`}
-          key={i}
-        >
+        <div className="objective" key={i}>
           <div>
             <span>{o.label}</span>
             <b>
@@ -100,8 +94,16 @@ export function QuestCard({
       ))}
       <div className="quest-reward">
         <span>
-          ✦ {number(q.honey)} honey {q.egg > 0 && " · 🥚 1 egg"} · {q.treat}{" "}
-          treats · {5 + q.gate} tickets
+          ✦ {number(q.honey)} Honey {q.egg > 0 && " · 1 Basic Egg"}
+          {q.treat > 0 && ` · ${q.treat} Treats`}
+          {(q.tickets ?? 5 + q.gate) > 0 &&
+            ` · ${q.tickets ?? 5 + q.gate} Tickets`}
+          {Object.entries(q.rewards ?? {}).map(([id, amount]) => (
+            <span key={id}>
+              {" "}
+              · {amount} {ITEM_NAMES[id] ?? id}
+            </span>
+          ))}
         </span>
         {ready ? (
           <button
@@ -135,6 +137,7 @@ function Hive() {
   const s = useGame((g) => g.game);
   useGame((g) => g.revision);
   const [selected, setSelected] = useState(s.bees[0].id);
+  const [egg, setEgg] = useState<EggKind>("egg");
   const [releaseConfirm, setReleaseConfirm] = useState(false);
   const b = s.bees.find((b) => b.id === selected) ?? s.bees[0],
     def = beeDefinition(b);
@@ -142,13 +145,24 @@ function Hive() {
     <>
       <div className="hive-tools">
         <span>
-          <b>{s.bees.length}</b> {s.bees.length === 1 ? "bee" : "bees"} ·{" "}
-          <b>{s.slots}</b> hive slots · <b>{s.inventory.egg}</b> eggs
+          <b>{s.bees.length}</b> bees · <b>{s.slots}</b> hive slots ·{" "}
+          <b>{s.inventory.egg}</b> eggs
         </span>
+        <select
+          aria-label="Egg type"
+          value={egg}
+          onChange={(e) => setEgg(e.target.value as EggKind)}
+        >
+          {Object.entries(EGGS).map(([id, def]) => (
+            <option key={id} value={id}>
+              {def.name} ({s.inventory[id] ?? 0})
+            </option>
+          ))}
+        </select>
         <button
           className="button small"
-          disabled={s.inventory.egg < 1 || s.bees.length >= s.slots}
-          onClick={() => action(() => hatch(s))}
+          disabled={s.inventory[egg] < 1 || s.bees.length >= s.slots}
+          onClick={() => action(() => hatch(s, egg))}
         >
           🥚 Hatch an egg
         </button>
@@ -160,12 +174,6 @@ function Hive() {
           + Hive slot · ✦ {number(slotCost(s))}
         </button>
       </div>
-      {s.balloonPollen > 0 && (
-        <p className="menu-intro">
-          Balloon pollen at hive: {Math.floor(s.balloonPollen).toLocaleString()}{" "}
-          · Press F at your hive to convert.
-        </p>
-      )}
       <div className="hive-layout">
         <div className="honeycomb">
           {Array.from({ length: Math.max(15, s.slots) }, (_, i) => {
@@ -215,7 +223,7 @@ function Hive() {
             <BeeIcon face={def.face} color={def.body} size={96} />
           </div>
           <h3>
-            {b.gifted ? "Gifted " : ""}
+            {b.gifted ? "★ Gifted " : ""}
             {def.name}
           </h3>
           <p>
@@ -227,8 +235,8 @@ function Hive() {
               <b>
                 {(
                   def.gather *
-                  giftedStats(b) *
-                  (1 + (b.level - 1) * 0.2)
+                  (1 + (b.level - 1) * 0.1) *
+                  (b.gifted ? 1.5 : 1)
                 ).toFixed(1)}
               </b>
             </span>
@@ -236,16 +244,18 @@ function Hive() {
               Gather interval<b>{def.interval.toFixed(1)}s</b>
             </span>
             <span>
-              Attack
-              <b>
-                {(def.attack > 0
-                  ? (def.attack + b.level * 1.5) * giftedStats(b)
-                  : 0
-                ).toFixed(1)}
-              </b>
+              Attack<b>{(def.attack * (b.gifted ? 1.5 : 1)).toFixed(1)}</b>
             </span>
             <span>
-              Convert<b>{def.conversion * b.level * giftedStats(b)}/s</b>
+              Convert
+              <b>
+                {(
+                  def.conversion *
+                  (1 + (b.level - 1) * 0.1) *
+                  (b.gifted ? 1.5 : 1)
+                ).toFixed(1)}
+                /s
+              </b>
             </span>
             <span>
               Energy
@@ -254,7 +264,12 @@ function Hive() {
               </b>
             </span>
             <span>
-              Ability<b>{abilityNames(def, b.gifted)}</b>
+              Ability
+              <b>
+                {(SPECIES_ABILITIES[def.face] ?? [])
+                  .map((kind) => abilityInfo(kind).name)
+                  .join(", ") || "None"}
+              </b>
             </span>
             <span>
               Current state<b>{b.state}</b>
@@ -264,12 +279,12 @@ function Hive() {
             <div>
               <span>Bond to next level</span>
               <b>
-                {Math.floor(b.bond)} / {Math.ceil(30 * b.level ** 1.5)}
+                {Math.floor(b.bond)} / {bondRequired(b.level)}
               </b>
             </div>
             <div className="progress">
               <i
-                style={{ width: `${(b.bond / (30 * b.level ** 1.5)) * 100}%` }}
+                style={{ width: `${(b.bond / bondRequired(b.level)) * 100}%` }}
               />
             </div>
           </div>
@@ -282,25 +297,35 @@ function Hive() {
           </button>
           <button
             className="button secondary"
-            disabled={
-              s.inventory.jelly < 1 ||
-              def.rarity === "Event" ||
-              !!s.jellyRun?.running
-            }
+            disabled={s.inventory.jelly < 1 || def.rarity === "Event" || !!s.jellyRun?.running}
             onClick={() => action(() => reroll(s, b.id))}
           >
-            Use Royal Jelly · {s.inventory.jelly.toLocaleString()} left
+            Use Royal Jelly · {s.inventory.jelly} left
           </button>
           <button
             className="button secondary"
-            disabled={
-              b.gifted || s.inventory.starTreat < 1 || !!s.jellyRun?.running
-            }
-            onClick={() => action(() => makeGifted(s, b.id))}
+            disabled={s.inventory.starJelly < 1 || def.rarity === "Event" || !!s.jellyRun?.running}
+            onClick={() => action(() => reroll(s, b.id, "starJelly"))}
           >
-            ★ Make gifted · {s.inventory.starTreat.toLocaleString()} Star Treats
-            left
+            Use Star Jelly · {s.inventory.starJelly} left
           </button>
+          <button
+            className="button gifted-button"
+            disabled={b.gifted || s.inventory.starTreat < 1 || !!s.jellyRun?.running}
+            onClick={() => action(() => giftBee(s, b.id))}
+          >
+            {b.gifted
+              ? "★ Gifted"
+              : `★ Give Star Treat · ${s.inventory.starTreat} left`}
+          </button>
+          {b.gifted && (
+            <p className="gifted-note">
+              +50% gather, conversion and attack.
+              {b.kind === "bee-0"
+                ? " ×1.2 pollen for your entire hive (does not stack)."
+                : ""}
+            </p>
+          )}
           <AutoJelly />
           <BeeAbilities bee={def} gifted={b.gifted} />
           {releaseConfirm ? (
@@ -373,7 +398,8 @@ function Journal() {
               <b>{p.name}</b>
               <small>
                 {p.role} ·{" "}
-                {s.completed.filter((id) => id.startsWith(p.id)).length}/5
+                {s.completed.filter((id) => id.startsWith(p.id)).length}/
+                {QUESTS.filter((q) => q.npc === p.id).length}
                 stories
               </small>
             </div>
@@ -421,128 +447,20 @@ function NPC() {
 export function MountainMap({ mini = false }: { mini?: boolean }) {
   const s = useGame((g) => g.game);
   useGame((g) => g.revision);
-  return (
-    <svg
-      className={mini ? "mini-map" : "mountain-map"}
-      viewBox="-90 -255 190 345"
-      role="img"
-      aria-label="World map showing fields, trails, gates and your current position"
-    >
-      <rect x="-90" y="-255" width="190" height="345" rx="10" fill="#e3e6c9" />
-      {PLATFORMS.map((p, i) => (
-        <rect
-          key={i}
-          x={p.x - p.w / 2}
-          y={p.z - p.d / 2}
-          width={p.w}
-          height={p.d}
-          fill={
-            ["#b2c58e", "#a5b77f", "#9bae7b", "#b7bf81", "#bdc194", "#bac9a2"][
-              i
-            ]
-          }
-          stroke="#8da078"
-          strokeWidth="1.2"
-          rx="2"
-        />
-      ))}
-      {RAMPS.map((r, i) => (
-        <g key={i}>
-          <path
-            d={`M${r.x} ${r.startZ}V${r.endZ}`}
-            stroke="#f5e6b9"
-            strokeWidth="6"
-          />
-          <circle
-            cx={r.x}
-            cy={r.gateZ}
-            r={4}
-            fill={s.bees.length >= r.gate ? "#537c5b" : "#b58a5d"}
-          />
-          {!mini && (
-            <text
-              x={r.x}
-              y={r.gateZ + 1.5}
-              textAnchor="middle"
-              fill="white"
-              fontSize="4"
-            >
-              {r.gate}
-            </text>
-          )}
-        </g>
-      ))}
-      {FIELDS.map((f) => (
-        <g key={f.id} opacity={s.bees.length >= f.gate ? 1 : 0.5}>
-          <rect
-            x={f.x - 10}
-            y={f.z - 10}
-            width={20}
-            height={20}
-            rx="1.5"
-            fill={
-              f.colors[1] > 0.5
-                ? "#d5a698"
-                : f.colors[2] > 0.5
-                  ? "#9dbabd"
-                  : "#e0cc8b"
-            }
-            stroke="#ffffff77"
-          />
-          {!mini && (
-            <text
-              x={f.x}
-              y={f.z + 0.8}
-              textAnchor="middle"
-              fontSize="3.5"
-              fill="#34523e"
-            >
-              {f.name.split(" ")[0]}
-            </text>
-          )}
-        </g>
-      ))}
-      {!mini &&
-        PLACES.map((p) => (
-          <circle
-            key={p.id}
-            cx={p.x}
-            cy={p.z}
-            r="1.6"
-            fill={p.kind === "npc" ? "#8d7157" : "#647f6b"}
-          />
-        ))}
-      {HIVE_PADS.map((h) => (
-        <rect
-          key={h.index}
-          x={h.x - 6}
-          y={h.z - 4}
-          width="12"
-          height="6"
-          fill={h.index === s.hive ? "#ffe000" : "#d1a75c"}
-        />
-      ))}
-      <circle
-        data-testid={mini ? "map-player" : undefined}
-        cx={s.player.x}
-        cy={s.player.z}
-        r={mini ? 4 : 3}
-        fill="#2f5c4b"
-        stroke="#fff6d9"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M-82 62v-12m-3 4 3-4 3 4"
-        stroke="#748868"
-        fill="none"
-        strokeWidth="1"
-      />
-      <text x="-82" y="68" fontSize="5" textAnchor="middle" fill="#748868">
-        N
-      </text>
-    </svg>
-  );
+  return <svg className={mini ? "mini-map" : "mountain-map"} viewBox="-185 -220 445 370" role="img" aria-label="World map showing fields, gates, hives and your current position">
+    <rect x={-185} y={-220} width={445} height={370} rx={10} fill="#d6dfbc" />
+    {importedMap.routes.map((r) => <path key={r.name} d={`M${r.from[0]} ${r.from[2]}L${r.to[0]} ${r.to[2]}`} stroke="#f8e7b1" strokeWidth={r.width} fill="none" />)}
+    {FIELDS.map((f) => <g key={f.id} opacity={s.bees.length >= f.gate ? 1 : 0.45}>
+      <rect x={f.x - f.width / 2} y={f.z - (f.depth ?? f.width) / 2} width={f.width} height={f.depth ?? f.width} rx={1.5} fill={f.colors[1] > 0.5 ? "#cb7370" : f.colors[2] > 0.5 ? "#6d9bc8" : "#719e59"} stroke="#fff" strokeWidth={0.7} />
+      {!mini && <text x={f.x} y={f.z} textAnchor="middle" fontSize={5} fill="#173b21">{f.name.split(" ")[0]}</text>}
+    </g>)}
+    {PLACES.map((p) => <circle key={p.id} cx={p.x} cy={p.z} r={mini ? 1.5 : 2} fill={p.accent} stroke="#fff" strokeWidth={0.6}><title>{p.name}</title></circle>)}
+    {HIVE_PADS.map((p) => <rect key={p.index} x={p.x - 4} y={p.z - 1} width={8} height={3} fill={s.hive === p.index ? "#f7bd26" : "#a88143"} />)}
+    {importedMap.gates.map((g) => <circle key={g.bees} cx={g.x} cy={g.z} r={3} fill={s.bees.length >= g.bees ? "#4c8853" : "#c7773e"}><title>{`${g.bees} bee gate`}</title></circle>)}
+    <circle data-testid={mini ? "map-player" : undefined} cx={s.player.x} cy={s.player.z} r={mini ? 3.5 : 3} fill="#ffffff" stroke="#263c33" strokeWidth={1.5} />
+  </svg>;
 }
+
 function MapMenu() {
   const s = useGame((g) => g.game);
   useGame((g) => g.revision);
@@ -725,7 +643,9 @@ function MenuPanel({
   const open = useGame((s) => s.open);
   const titles = {
     shop: PLACES.find((p) => p.id === placeId)?.name ?? "Basic Shop",
-    eggs: "Basic Egg Shop",
+    eggs: PLACES.find((p) => p.id === placeId)?.name ?? "Basic Egg Shop",
+    guild: "Badge Bearer’s Guild",
+    badges: "Badges",
     tickets: "Ticket Tent",
     hive: "Your Hive",
     bees: "Bees",
@@ -788,14 +708,18 @@ function MenuPanel({
           </button>
         </header>
         <div className="modal-content">
-          {menu === "tickets" ? (
+          {menu === "guild" ? (
+            <GuildPanel />
+          ) : menu === "badges" ? (
+            <BadgesPanel />
+          ) : menu === "tickets" ? (
             <TicketShop />
           ) : menu === "bees" ? (
             <BeeIndex />
           ) : menu === "shop" ? (
             <ShopExperience key={placeId} placeIdOverride={placeId} />
           ) : menu === "eggs" ? (
-            <ShopExperience consumables />
+            <ShopExperience consumables placeIdOverride={placeId} />
           ) : menu === "hive" ? (
             <Hive />
           ) : menu === "quests" ? (

@@ -1,3 +1,4 @@
+import { placeSprinkler } from "../systems/sprinklers";
 import { Suspense, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -5,7 +6,6 @@ import World from "../world/World";
 import { KeeperModel } from "../world/models";
 import { useGame, sound } from "../systems/store";
 import {
-  updateAutoJelly,
   atHive,
   nearbyHive,
   claimHive,
@@ -15,12 +15,12 @@ import {
   step,
   startConversion,
   interactPlace,
-  useItem,
-  feed,
-  reroll,
+  updateAutoJelly,
 } from "../systems/simulation";
-import { surface } from "../world/terrain";
+import { surface, solidAt } from "../world/terrain";
 import { TOOLS } from "../data/content";
+import HiveItemDrop from '../world/HiveItemDrop';
+import { activateHotbar, useItemDrag } from '../systems/item-drag';
 
 function Controller() {
   const { gl, camera } = useThree();
@@ -33,16 +33,12 @@ function Controller() {
     rotate: false,
     jumpQueued: false,
     yaw: 0.38,
-    pitch: 0.62,
-    distance: 52,
-    target: new THREE.Vector3(0, 2, 44),
+    pitch: 0.52,
+    distance: 24,
+    target: new THREE.Vector3(game.player.x, game.player.y + 2, game.player.z),
     previous: new THREE.Vector3(game.player.x, game.player.y, game.player.z),
     rendered: new THREE.Vector3(game.player.x, game.player.y, game.player.z),
-    orbit: new THREE.Vector3(
-      Math.sin(0.38) * Math.cos(0.62) * 52,
-      Math.sin(0.62) * 52,
-      Math.cos(0.38) * Math.cos(0.62) * 52,
-    ),
+    orbit: new THREE.Vector3(Math.sin(.38)*Math.cos(.52)*24,Math.sin(.52)*24,Math.cos(.38)*Math.cos(.52)*24),
     tick: 0,
     ui: 0,
     save: 0,
@@ -68,15 +64,25 @@ function Controller() {
       )
         e.preventDefault();
       const state = useGame.getState();
+      if (useItemDrag.getState().pending) {
+        if (e.code === 'Escape') useItemDrag.setState({ pending: null });
+        clear();
+        return;
+      }
       if (e.code === "Escape") {
         state.open(state.menu ? null : "settings");
         clear();
         return;
       }
       if (e.repeat) return;
-      if (e.code === "KeyE" && state.shopContext) {
-        state.leaveShop();
+      if (e.code === "KeyJ") {
+        state.open(state.menu === "badges" ? null : "badges");
         clear();
+        return;
+      }
+      if (e.code === "KeyR" && !state.menu) {
+        placeSprinkler(game);
+        state.refresh();
         return;
       }
       if (
@@ -100,18 +106,16 @@ function Controller() {
         clear();
         return;
       }
+      if (e.code === "KeyE" && state.shopContext) {
+        state.leaveShop();
+        state.save();
+        clear();
+        return;
+      }
       if (state.menu) return;
       if (e.code.startsWith("Digit")) {
         const n = Number(e.code.slice(5));
-        if (n === 2) useItem(game, "egg");
-        if (n === 3) useItem(game, "booster");
-        if (n === 4) useItem(game, "converter");
-        if (n === 5) feed(game, game.bees[0].id);
-        if (n === 6) reroll(game, game.bees[0].id);
-        if (n === 7) state.open("inventory");
-        if (n === 8) state.open("hive");
-        if (n === 9) state.open("bees");
-        if (n === 0) state.open("map");
+        if (n !== 1) activateHotbar(n === 0 ? 10 : n);
         state.refresh();
         state.save();
         return;
@@ -130,7 +134,8 @@ function Controller() {
             p.kind === "shop" ||
             p.kind === "eggs" ||
             p.kind === "npc" ||
-            p.kind === "tickets"
+            p.kind === "tickets" ||
+            p.kind === "guild"
           )
             state.open(p.kind, p.id);
           else {
@@ -150,7 +155,7 @@ function Controller() {
       inp.keys.delete(e.code);
     };
     const down = (e: PointerEvent) => {
-      if (useGame.getState().menu) return;
+      if (useGame.getState().menu || useItemDrag.getState().pending || useItemDrag.getState().item) return;
       if (e.button === 0) {
         inp.gather = true;
         sound(630);
@@ -210,20 +215,18 @@ function Controller() {
     const state = useGame.getState(),
       i = input.current;
     const dt = Math.min(frameDt, 0.25);
-    if (game.jellyRun?.running) {
-      updateAutoJelly(game, 10000);
-      if (!game.jellyRun.running) state.save();
-    }
     const paused = state.menu === "settings";
-    if (state.menu) {
+    if (state.menu || useItemDrag.getState().pending || useItemDrag.getState().item) {
       i.keys.clear();
       i.gather = false;
+      i.jumpQueued = false;
     }
+    updateAutoJelly(game,10000);
     if (!paused) {
       i.tick += dt;
       let ticks = 0;
       while (i.tick >= 1 / 30 && ticks++ < 8) {
-        i.previous.set(game.player.x, game.player.y, game.player.z);
+        i.previous.set(game.player.x,game.player.y,game.player.z);
         const f =
           Number(i.keys.has("KeyW") || i.keys.has("ArrowUp")) -
           Number(i.keys.has("KeyS") || i.keys.has("ArrowDown"));
@@ -247,31 +250,23 @@ function Controller() {
         i.tick -= 1 / 30;
       }
     }
-    const current = new THREE.Vector3(
-      game.player.x,
-      game.player.y,
-      game.player.z,
-    );
-    // Interpolate the two fixed simulation poses, including frames with no physics tick.
-    // Teleports snap both poses together instead of sweeping through terrain.
-    if (i.previous.distanceToSquared(current) > 64) i.previous.copy(current);
-    const alpha = THREE.MathUtils.clamp(i.tick / (1 / 30), 0, 1);
-    i.rendered.copy(i.previous).lerp(current, alpha);
-    if (body.current) {
-      body.current.position.copy(i.rendered);
-      body.current.rotation.y = game.player.yaw;
-    }
-    i.target.copy(i.rendered);
-    i.target.y += 1.8;
+    const current = new THREE.Vector3(game.player.x, game.player.y, game.player.z);
+    if (i.previous.distanceToSquared(current)>64) i.previous.copy(current);
+    const alpha=THREE.MathUtils.clamp(i.tick/(1/30),0,1);
+    i.rendered.copy(i.previous).lerp(current,alpha);
+    if (body.current) { body.current.position.copy(i.rendered); body.current.rotation.y=game.player.yaw; }
+    i.target.copy(i.rendered); i.target.y+=1.8;
     let dist = i.distance;
+    // Keep a low camera on the conversion apron in front of the hive boards.
+    // Higher overview angles remain free to look across the whole world.
     // Sample the camera ray against the same terrain used by player collision.
-    for (let t = 2; t < i.distance; t += 2) {
+    for (let t = 2; t < dist; t += 2) {
       const x = i.target.x + Math.sin(i.yaw) * Math.cos(i.pitch) * t,
         z = i.target.z + Math.cos(i.yaw) * Math.cos(i.pitch) * t,
         y = i.target.y + Math.sin(i.pitch) * t;
-      const h = surface(x, z);
-      if (h !== null && h > y - 1) {
-        dist = Math.max(7, t - 2);
+      const h = surface(x, z, y);
+      if ((h !== null && h > y - 1) || solidAt(x, z, y - 0.65)) {
+        dist = Math.max(3, t - 1);
         break;
       }
     }
@@ -280,9 +275,7 @@ function Controller() {
       i.target.y + Math.sin(i.pitch) * dist,
       i.target.z + Math.cos(i.yaw) * Math.cos(i.pitch) * dist,
     );
-    // Smooth orbit/zoom independently; translate with the same pose the player uses.
-    // Easing an absolute camera while snapping its aim to physics caused walking jitter.
-    i.orbit.lerp(desired.sub(i.target), 1 - Math.exp(-dt * 7));
+    i.orbit.lerp(desired.sub(i.target),1-Math.exp(-dt*7));
     camera.position.copy(i.target).add(i.orbit);
     camera.lookAt(i.target);
     i.ui += dt;
@@ -322,7 +315,7 @@ export default function Scene() {
     <Canvas
       shadows={quality === "high"}
       dpr={quality === "low" ? 1 : [1, 1.5]}
-      camera={{ position: [0, 35, 91], fov: 50, near: 0.2, far: 650 }}
+      camera={{ position: [12, 17, 24], fov: 50, near: 0.2, far: 850 }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.setClearColor("#9ecbfa");
@@ -331,7 +324,7 @@ export default function Scene() {
       }}
     >
       <color attach="background" args={["#9ecbfa"]} />
-      <fog attach="fog" args={["#9ecbfa", 110, 340]} />
+      <fog attach="fog" args={["#9ecbfa", 180, 600]} />
       <ambientLight intensity={0.55} />
       <hemisphereLight args={["#ffffff", "#8caa73", 0.8]} />
       <directionalLight
@@ -350,6 +343,7 @@ export default function Scene() {
         shadow-normalBias={0.1}
       />
       <Suspense fallback={null}>
+        <HiveItemDrop />
         <World />
         <Controller />
       </Suspense>

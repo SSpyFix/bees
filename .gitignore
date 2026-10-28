@@ -2,5 +2,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 test-results/
+test-results-*/
 playwright-report/
 .local/
+
+# Generated Python bytecode
+__pycache__/
+*.py[cod]

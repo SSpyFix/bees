@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as sim from "../game/systems/simulation";
-import { BEES } from "../game/data/content";
+import { BEES, FIELDS, PLACES } from "../game/data/content";
 import { beeAbilities, ABILITIES } from "../game/data/abilities";
 import {
   collectToken,
@@ -13,11 +13,12 @@ import { hiveBonus, updateCapacity } from "../game/systems/gifted";
 describe("bulk consumables", () => {
   it("buys one million jelly in a single exact transaction", () => {
     const s = sim.createGame();
-    s.honey = 180000001;
+    const cost = sim.purchaseCost(s, "jelly", 1000000);
+    s.honey = cost + 1;
     expect(sim.buy(s, "jelly", 1000000)).toBe(true);
     expect(s.honey).toBe(1);
     expect(s.inventory.jelly).toBe(1000000);
-    expect(s.stats.spent).toBe(180000000);
+    expect(s.stats.spent).toBe(cost);
     expect(sim.restore(sim.serialize(s)).inventory.jelly).toBe(1000000);
   });
   it("refuses partial, negative, fractional, infinite and unaffordable orders", () => {
@@ -33,9 +34,9 @@ describe("bulk consumables", () => {
 describe("bee abilities and gifted hive", () => {
   function fieldGame() {
     const s = sim.createGame();
-    s.player.x = 0;
-    s.player.y = 0;
-    s.player.z = 8;
+    const field = FIELDS.find(f => f.id === "blue")!;
+    const flower = s.flowers.filter(f => f.field === field.id && f.color === "blue").sort((a, b) => sim.distance(a, field) - sim.distance(b, field))[0];
+    Object.assign(s.player, { x: flower.x, y: flower.y, z: flower.z });
     s.capacity = 100000;
     s.enemies = [];
     return s;
@@ -54,9 +55,9 @@ describe("bee abilities and gifted hive", () => {
   it("Puppy Love immediately processes bond into levels", () => {
     const s = fieldGame();
     activateAbility(s, "puppy-love", s.bees[0], 10, false);
-    expect(s.bees[0].level).toBe(2);
-    expect(s.bees[0].bond).toBe(70);
-    expect(s.stats.levels).toBe(1);
+    expect(s.bees[0].level).toBe(3);
+    expect(s.bees[0].bond).toBe(50);
+    expect(s.stats.levels).toBe(2);
   });
   it("gives Token Link to its four species and uses actual support abilities", () => {
     for (const i of [14, 18, 20, 26])
@@ -71,12 +72,13 @@ describe("bee abilities and gifted hive", () => {
   });
   it("Token Link collects same-field tokens once and leaves other links and distant loot", () => {
     const s = fieldGame();
+    const { x, y, z } = s.player;
     s.tokens = [
-      { id: 1, x: 0, y: 0.7, z: 8, kind: "token-link", value: 5, life: 20 },
-      { id: 2, x: 8, y: 0.7, z: 8, kind: "honey", value: 10, life: 20 },
-      { id: 3, x: -8, y: 0.7, z: 8, kind: "focus", value: 1, life: 20 },
-      { id: 4, x: 8, y: 0.7, z: 8, kind: "token-link", value: 1, life: 20 },
-      { id: 5, x: 100, y: 0.7, z: 8, kind: "ticket", value: 1, life: 20 },
+      { id: 1, x, y: y + 0.7, z, kind: "token-link", value: 5, life: 20 },
+      { id: 2, x: x + 20, y: y + 0.7, z, kind: "honey", value: 10, life: 20 },
+      { id: 3, x: x - 8, y: y + 0.7, z, kind: "focus", value: 1, life: 20 },
+      { id: 4, x: x + 8, y: y + 0.7, z, kind: "token-link", value: 1, life: 20 },
+      { id: 5, x: x + 100, y: y + 0.7, z, kind: "ticket", value: 1, life: 20 },
     ];
     collectToken(s, 1);
     expect(s.tokens.map((t) => t.id)).toEqual([4, 5]);
@@ -88,7 +90,7 @@ describe("bee abilities and gifted hive", () => {
   });
   it("blue bombs harvest blue flowers only and plus bombs have greater reach", () => {
     const s = fieldGame();
-    const p = { x: 0, y: 0, z: 8 };
+    const p = { ...s.player };
     const red = s.flowers.filter((f) => f.color === "red").map((f) => f.pollen);
     activateAbility(s, "blue-bomb", p, 1, false);
     expect(s.pollen).toBeGreaterThan(0);
@@ -105,10 +107,9 @@ describe("bee abilities and gifted hive", () => {
     const a = fieldGame(),
       b = fieldGame();
     a.seed = b.seed = 5;
-    activateAbility(a, "pollen-mark", { x: 0, y: 0, z: 8 }, 1, false);
+    activateAbility(a, "pollen-mark", a.player, 1, false);
     expect(sim.collect(a)).toBeGreaterThan(sim.collect(b));
-    a.player.x = b.player.x = 9;
-    a.player.z = b.player.z = 8;
+    a.player.x += 12; b.player.x += 12;
     a.pollen = b.pollen = 0;
     a.flowers = b.flowers.map((f) => ({ ...f }));
     a.seed = b.seed = 9;
@@ -123,11 +124,11 @@ describe("bee abilities and gifted hive", () => {
       ["triangulate", "triangle"],
     ]) {
       const s = fieldGame();
-      activateAbility(s, id, { x: 0, y: 0, z: 8 }, 5, false);
+      activateAbility(s, id, s.player, 5, false);
       expect(s.effects.some((e) => e.kind === kind)).toBe(true);
     }
     const s = fieldGame();
-    activateAbility(s, "fuzz-bombs", { x: 0, y: 0, z: 8 }, 5, false);
+    activateAbility(s, "fuzz-bombs", s.player, 5, false);
     expect(s.flowers.some((f) => f.pollination > 0)).toBe(true);
   });
   it("gifted-only abilities are gated and abilities spawn during combat", () => {
@@ -172,6 +173,7 @@ describe("bee abilities and gifted hive", () => {
     activateAbility(s, "impale", enemy, 10, false);
     expect(enemy.hp).toBe(0);
     expect(s.stats.kills).toBe(1);
+    expect(s.lifetime.battle).toBeGreaterThan(0);
     expect(s.tokens.some((t) => t.kind === "ticket")).toBe(true);
     activateAbility(s, "impale", enemy, 10, false);
     expect(s.stats.kills).toBe(1);
@@ -182,6 +184,7 @@ describe("bee abilities and gifted hive", () => {
     s.pollen = 0;
     const loaded = sim.restore(sim.serialize(s));
     expect(loaded.balloonPollen).toBe(120);
+    Object.assign(loaded.player, sim.home(loaded));
     expect(sim.startConversion(loaded)).toBe(true);
     sim.convert(loaded, 100);
     expect(loaded.balloonPollen).toBe(0);
@@ -205,6 +208,17 @@ describe("bee abilities and gifted hive", () => {
     }
     expect(s.effects.filter((e) => e.kind === "target")).toHaveLength(0);
     expect(s.buffs.some((b) => b.kind === "precision")).toBe(true);
+  });
+  it("preserves Tabby Love, Fetch, balloon cargo, and temporary canonical buffs on reload", () => {
+    const s = fieldGame();
+    activateAbility(s, "tabby-love", s.player);
+    activateAbility(s, "inflate-balloons", s.player, 2);
+    s.beeProgress.fetch = 4;
+    sim.buff(s, "precision", 1.1, 60);
+    const loaded = sim.restore(sim.serialize(s));
+    expect(loaded.beeProgress).toEqual({ tabbyLove: 1, fetch: 4 });
+    expect(loaded.balloonPollen).toBe(40);
+    expect(loaded.buffs.find(b => b.kind === "precision")?.value).toBe(1.1);
   });
   it("every roster ability runs without corrupting resources", () => {
     for (const def of BEES) {
@@ -230,6 +244,8 @@ describe("bee abilities and gifted hive", () => {
     expect(sim.beeAttack(s, b)).toBe(7.5);
     b.gifted = true;
     expect(sim.beeAttack(s, b)).toBe(11.25);
+    sim.buff(s, "stinger", 1.5, 30);
+    expect(sim.beeAttack(s, b)).toBe(16.875);
   });
 });
 
@@ -237,11 +253,13 @@ describe("gifted and royal jelly", () => {
   it("finishes fractional conversion ticks at an exact spendable honey amount", () => {
     const s = sim.createGame();
     s.balloonPollen = 120;
+    Object.assign(s.player, sim.home(s));
     sim.startConversion(s);
     for (let i = 0; i < 300; i++) sim.convert(s, 1 / 30);
     expect(s.balloonPollen).toBe(0);
     expect(s.honey).toBe(120);
-    expect(sim.buy(s, "booster")).toBe(true);
+    s.honey += 10000 - 120;
+    expect(sim.buy(s, "treat")).toBe(true);
   });
   it("continues the same random roll sequence after saving and reloading", () => {
     const s = sim.createGame();
@@ -257,8 +275,7 @@ describe("gifted and royal jelly", () => {
   });
   it("buys Star Treats with tickets and gifts an Event bee without rerolling it", () => {
     const s = sim.createGame();
-    s.player.x = -28;
-    s.player.z = 49;
+    Object.assign(s.player, PLACES.find(p => p.id === "tickets")!);
     s.inventory.ticket = 10000;
     expect(sim.buyStarTreats(s, 10)).toBe(true);
     expect(s.inventory.ticket).toBe(0);

@@ -10,6 +10,8 @@ export type Flower = Vec & {
   multiplier: number;
   pollination: number;
   goo: number;
+  texture?: number;
+  width?: number;
 };
 export type BeeState =
   | "following"
@@ -23,7 +25,6 @@ export type BeeState =
 export type Bee = Vec & {
   id: string;
   kind: string;
-  gifted: boolean;
   level: number;
   bond: number;
   energy: number;
@@ -32,6 +33,7 @@ export type Bee = Vec & {
   timer: number;
   abilityTimer: number;
   phase: number;
+  gifted: boolean;
 };
 export type Enemy = Vec & {
   id: number;
@@ -47,12 +49,12 @@ export type Enemy = Vec & {
   windup: number;
 };
 export type Token = Vec & {
+  gifted?: boolean;
+  source?: string;
   id: number;
   kind: string;
   value: number;
   life: number;
-  gifted?: boolean;
-  source?: string;
 };
 export type AbilityEffect = Vec & {
   id: number;
@@ -63,15 +65,28 @@ export type AbilityEffect = Vec & {
   gifted: boolean;
   tick: number;
   stored: number;
+  duration?: number;
   group?: number;
   points?: { x: number; z: number }[];
 };
-export type Buff = { kind: string; remaining: number; value: number };
+export type Buff = {
+  kind: string;
+  remaining: number;
+  value: number;
+  stacks?: number;
+};
 export type Floater = Vec & {
   id: number;
   text: string;
   color: string;
   life: number;
+};
+export type WorldEffect = Vec & {
+  id: number;
+  kind: string;
+  radius: number;
+  life: number;
+  duration: number;
 };
 export type Game = {
   version: 2;
@@ -85,6 +100,19 @@ export type Game = {
   hat: string;
   owned: string[];
   slots: number;
+  eggsPurchased: number;
+  jelliesPurchased: number;
+  lifetime: Record<string, number>;
+  badges: Record<string, number>;
+  crafting: { item: string; quantity: number; elapsed: number } | null;
+  sprinkler: number;
+  sprinklers: (Vec & {
+    id: number;
+    field: string;
+    setup: number;
+    timer: number;
+    pulse: number;
+  })[];
   bees: Bee[];
   player: Vec & {
     yaw: number;
@@ -99,11 +127,12 @@ export type Game = {
   enemies: Enemy[];
   tokens: Token[];
   buffs: Buff[];
+  floaters: Floater[];
   effects: AbilityEffect[];
   beeProgress: { tabbyLove: number; fetch: number };
   balloonPollen: number;
-  floaters: Floater[];
   inventory: Record<string, number>;
+  hotbar: (string | null)[];
   accepted: Record<string, number[]>;
   completed: string[];
   unlocks: number[];
@@ -129,13 +158,7 @@ export type Game = {
   noticeId: number;
   cooldowns: Record<string, number>;
   challenge: { remaining: number; gathered: number; target: number } | null;
-  jellyRun: {
-    beeId: string;
-    used: number;
-    running: boolean;
-    rarity: "Any" | "Legendary" | "Mythic";
-    gifted: boolean;
-  } | null;
+  jellyRun: { beeId: string; used: number; running: boolean; rarity: "Any" | "Legendary" | "Mythic"; gifted: boolean } | null;
   settings: {
     volume: number;
     muted: boolean;

@@ -1,4 +1,6 @@
-import { ABILITIES, beeAbilities } from "../data/abilities";
+import { ITEM_NAMES } from "../data/progression";
+import type { Token } from "./types";
+import { ABILITIES, beeAbilities, ABILITY_ALIASES } from "../data/abilities";
 import { FIELDS, BEES } from "../data/content";
 import type { Vec } from "../data/content";
 import type { Game, Bee, AbilityEffect } from "./types";
@@ -23,7 +25,7 @@ const inField = (p: Vec) =>
   FIELDS.find(
     (f) =>
       Math.abs(p.x - f.x) < f.width / 2 + 1 &&
-      Math.abs(p.z - f.z) < f.width / 2 + 1 &&
+      Math.abs(p.z - f.z) < (f.depth ?? f.width) / 2 + 1 &&
       sameHeight(p, f),
   );
 export function areaMultiplier(s: Game, kind: string, p: Vec) {
@@ -61,7 +63,8 @@ function stack(
   if (b) {
     b.value = Math.min(max, b.value + amount);
     b.remaining = seconds;
-  } else s.buffs.push({ kind, value: 1 + amount, remaining: seconds });
+    b.stacks = Math.min(Math.round((max - 1) / amount), (b.stacks ?? 1) + 1);
+  } else s.buffs.push({ kind, value: 1 + amount, remaining: seconds, stacks: 1 });
 }
 function effect(
   s: Game,
@@ -129,6 +132,7 @@ export function activateAbility(
   level = 1,
   gifted = false,
 ) {
+  kind = ABILITY_ALIASES[kind] ?? kind;
   const power = 1 + level * 0.15;
   if (
     kind.includes("bomb") &&
@@ -144,6 +148,7 @@ export function activateAbility(
       (kind.endsWith("plus") ? 7 : 4.5) * hiveBonus(s, "bomb-power");
     const amount =
       12 *
+      multiplier(s, "bombCombo") *
       power *
       hiveBonus(s, "bomb") *
       hiveBonus(s, `${color ?? "buzz"}-bomb`);
@@ -153,6 +158,7 @@ export function activateAbility(
     area(s, p, radius, amount, color, instant);
     if (color && multiplier(s, `${color}-bomb-sync`) > 1)
       area(s, p, radius, amount, "white", instant);
+    stackAbility(s, "bombCombo");
     effect(s, "blast", p, level, gifted, 0.6, radius);
     return;
   }
@@ -479,21 +485,22 @@ export function collectToken(s: Game, id: number) {
   if (!t || t.life <= 0) return;
   s.tokens = s.tokens.filter((x) => x.id !== id);
   s.stats.tokens++;
-  event(s, "token", 1);
+  event(s, "token", 1, t.kind);
+  if (t.kind !== "honey" && !Object.hasOwn(ITEM_NAMES, t.kind)) event(s, "ability", 1);
   if (t.kind === "honey") {
     awardHoney(s, t.value * hiveBonus(s, "honey-token"));
     return;
   }
-  if (t.kind === "treat" || t.kind === "ticket") {
-    s.inventory[t.kind] += t.value;
+  if (Object.hasOwn(ITEM_NAMES, t.kind)) {
+    s.inventory[t.kind] = (s.inventory[t.kind] ?? 0) + t.value;
     return;
   }
-  if (t.kind === "token-link") {
+  if (t.kind === "token-link" || t.kind === "link") {
     const f = inField(t),
       ids = s.tokens
         .filter(
           (x) =>
-            x.kind !== "token-link" &&
+            x.kind !== "token-link" && x.kind !== "link" &&
             x.life > 0 &&
             sameHeight(x, t) &&
             (f ? inField(x)?.id === f.id : distance(x, t) < 18),
@@ -520,13 +527,14 @@ export function spawnBeeAbilities(
   );
   if (!choices.length) return;
   const kind = choices[Math.floor(random(s) * choices.length)];
-  spawnToken(s, b.x, s.player.y, b.z, kind, b.level, b.gifted, b.id);
+  const ground = inField(b)?.y ?? s.player.y;
+  spawnToken(s, b.x, ground, b.z, kind, b.level, b.gifted, b.id);
   const f = inField(b),
     duplication =
       hiveBonus(s, "duplication") +
       (f ? multiplier(s, `corrupt:${f.id}`) - 1 : 0);
   if (random(s) < duplication)
-    spawnToken(s, b.x + 2, s.player.y, b.z + 1, kind, b.level, b.gifted, b.id);
+    spawnToken(s, b.x + 2, ground, b.z + 1, kind, b.level, b.gifted, b.id);
   b.abilityTimer = 14 + random(s) * 18;
 }
 export function gatherPassive(s: Game, b: Bee) {
@@ -615,8 +623,8 @@ export function updateEffects(s: Game, dt: number) {
       e.z += Math.sin(a) * 2;
       const f = inField(s.player);
       if (f) {
-        e.x = Math.max(f.x - 9, Math.min(f.x + 9, e.x));
-        e.z = Math.max(f.z - 9, Math.min(f.z + 9, e.z));
+        e.x = Math.max(f.x - f.width / 2, Math.min(f.x + f.width / 2, e.x));
+        e.z = Math.max(f.z - (f.depth ?? f.width) / 2, Math.min(f.z + (f.depth ?? f.width) / 2, e.z));
       }
       area(
         s,
@@ -651,4 +659,75 @@ export function updateEffects(s: Game, dt: number) {
     }
   }
   s.effects = s.effects.filter((e) => !expired.has(e.id));
+}
+
+export function restoreBuffs(s: Game, saved: unknown, elapsed: number) {
+  if (!Array.isArray(saved)) return;
+  for (const value of saved.slice(0, 60)) {
+    if (
+      !value ||
+      typeof value.kind !== "string" ||
+      typeof value.remaining !== "number" ||
+      !Number.isFinite(value.remaining)
+    )
+      continue;
+    const kind = ({ babyLove: "baby-love", bearMorph: "bear-morph" } as Record<string, string>)[value.kind] ?? value.kind;
+    const def = ABILITIES[kind];
+    const field =
+      value.kind.startsWith("field:") &&
+      FIELDS.some((f) => `field:${f.id}` === value.kind);
+    const temporary = ({ precision: 60, luck: 30, "festive-blessing": 10, "blue-bomb-sync": 20, "red-bomb-sync": 20 } as Record<string, number>)[kind];
+    const max = def?.duration ?? temporary ?? (field ? 900 : 600);
+    const remaining = Math.min(max, value.remaining) - elapsed;
+    if (remaining <= 0 || (!def && !field && !temporary) || s.buffs.some(b => b.kind === kind)) continue;
+    if (def?.duration) {
+      const stacks =
+        typeof value.stacks === "number" && Number.isFinite(value.stacks)
+          ? Math.max(1, Math.min(def.cap ?? 1, Math.floor(value.stacks)))
+          : 1;
+      s.buffs.push({
+        kind,
+        remaining,
+        stacks,
+        value: kind === "bear-morph" && value.value === 2.5
+          ? 2.5
+          : (def.base ?? 1) + (def.increment ?? 1) * stacks,
+      });
+    } else if (typeof value.value === "number" && Number.isFinite(value.value))
+      s.buffs.push({
+        kind: value.kind,
+        remaining,
+        value: Math.max(1, Math.min(5, value.value)),
+      });
+  }
+}
+
+/** Compatibility for saved inventories and the item drag controls. */
+export function stackAbility(s: Game, kind: string) {
+  const canonical = ABILITY_ALIASES[kind] ?? kind;
+  if (kind === "bombCombo") {
+    const b = s.buffs.find(b => b.kind === kind);
+    if (b) { b.stacks = Math.min(10, (b.stacks ?? 0) + 1); b.value = 1 + b.stacks * 0.25; b.remaining = 5; }
+    else s.buffs.push({ kind, stacks: 1, value: 1.25, remaining: 5 });
+    return true;
+  }
+  if (["red", "blue", "white"].includes(kind)) activateAbility(s, `${kind}-boost`, s.player);
+  else if (["haste", "focus", "rage", "melody", "inspire", "baby-love", "bear-morph"].includes(canonical)) activateAbility(s, canonical, s.player);
+  else return false;
+  return true;
+}
+export function applyAbility(s: Game, t: Token) {
+  if (t.kind === "honey") { awardHoney(s, t.value * hiveBonus(s, "honey-token")); return; }
+  if (Object.hasOwn(ITEM_NAMES, t.kind)) { s.inventory[t.kind] = (s.inventory[t.kind] ?? 0) + t.value; return; }
+  if (["link", "token-link"].includes(t.kind)) {
+    const field = inField(t);
+    for (const linked of [...s.tokens]) if (!["link", "token-link"].includes(linked.kind) && linked.life > 0 && sameHeight(linked, t) && (field ? inField(linked)?.id === field.id : distance(linked, t) < 18)) {
+      collectToken(s, linked.id);
+      awardHoney(s, (25 + 10 * t.value) * hiveBonus(s, "honey-token"));
+    }
+    return;
+  }
+  if (stackAbility(s, t.kind)) return;
+  activateAbility(s, t.kind, t, Math.max(1, t.value), t.gifted ?? false);
+
 }

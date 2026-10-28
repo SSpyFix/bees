@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { GEAR, PLACES } from "../game/data/content";
+import { GEAR } from "../game/data/content";
+import type { Gear } from "../game/data/equipment";
+import { ITEM_NAMES } from "../game/data/progression";
 import { useGame, sound } from "../game/systems/store";
-import { buy, maxPurchase, eggCost } from "../game/systems/simulation";
+import { buy, maxPurchase, eggCost, jellyCost, purchaseCost } from "../game/systems/simulation";
 import ShopPreview from "./ShopPreview";
 export default function ShopExperience({
   consumables = false,
@@ -15,16 +17,8 @@ export default function ShopExperience({
   const [selected, setSelected] = useState(0),
     [quantity, setQuantity] = useState("1");
   const [failure, setFailure] = useState("");
-  const tier = PLACES.find((p) => p.id === placeId)?.gate ?? 0;
-  const hq =
-    placeId === "blue-hq" ? "blue" : placeId === "red-hq" ? "red" : null;
-  const gear = GEAR.filter((g) =>
-    hq
-      ? (g.type === "tool" && g.color === hq) ||
-        (g.type !== "tool" && g.gate <= 15)
-      : g.gate <= (tier === 0 ? 5 : tier === 10 ? 15 : tier === 25 ? 25 : 35),
-  );
-  const items = consumables
+  const gear = GEAR.filter((g) => g.shop === placeId);
+  const items: (Omit<Gear, "type" | "icon"> & { type: string })[] = consumables
     ? [
         {
           id: "egg",
@@ -38,16 +32,16 @@ export default function ShopExperience({
           id: "treat",
           name: "Treat",
           type: "treat",
-          cost: 12,
+          cost: 10000,
           gate: 0,
           description:
-            "A tasty snack that increases your bee's bond by 25. Use it in your hive to level up your bees.",
+            "A tasty snack that increases your bee's bond by 10. Use it in your hive to level up your bees.",
         },
         {
           id: "jelly",
           name: "Royal Jelly",
           type: "jelly",
-          cost: 180,
+          cost: jellyCost(s),
           gate: 0,
           description:
             "Transforms a bee into a random Rare, Epic, Legendary, or Mythic bee. Has a 1 in 250 chance to make it gifted.",
@@ -69,7 +63,7 @@ export default function ShopExperience({
           gate: 0,
           description: "Instantly converts all carried pollen into honey.",
         },
-      ]
+      ].filter(item => placeId === "treat-shop" ? item.id === "treat" : placeId === "jelly-shop" ? item.id === "jelly" : item.id === "egg")
     : gear;
   const item = items[selected % items.length];
   const qty = consumables
@@ -81,11 +75,14 @@ export default function ShopExperience({
     !consumables && [s.tool, s.bag, s.boots, s.hat].includes(item.id);
   const owned = !consumables && s.owned.includes(item.id),
     locked = s.bees.length < item.gate;
-  const affordable = owned || s.honey >= item.cost * qty;
+  const total = consumables ? purchaseCost(s, item.id, qty) : item.cost;
+  const missing = !owned && "ingredients" in item && Object.entries(item.ingredients ?? {}).some(([id, n]) => (s.inventory[id] ?? 0) < n);
+  const affordable = owned || s.honey >= total;
   const disabled =
     equipped ||
     locked ||
     !affordable ||
+    missing ||
     qty < 1 ||
     (consumables && qty > maxPurchase(s, item.id));
   const advance = (delta: number) =>
@@ -105,6 +102,11 @@ export default function ShopExperience({
         <h3>{item.name}</h3>
         <p className="shop-price">{item.cost.toLocaleString()} Honey</p>
         <p>{item.description}</p>
+        {"ingredients" in item && item.ingredients && <ul className="recipe-list">
+          {Object.entries(item.ingredients).map(([id, n]) => <li key={id} className={(s.inventory[id] ?? 0) < n ? "missing" : ""}>
+            {n.toLocaleString()} {ITEM_NAMES[id] ?? id}<span>{(s.inventory[id] ?? 0).toLocaleString()} owned</span>
+          </li>)}
+        </ul>}
         {"power" in item && item.power && (
           <p>
             +{Math.round((item.power - 1) * 100)}%{" "}
@@ -151,8 +153,10 @@ export default function ShopExperience({
               ? `${item.gate} bees required`
               : !affordable
                 ? "Can't afford"
+                : missing
+                  ? "Materials required"
                 : consumables
-                  ? `Buy ${qty.toLocaleString()}× · ${(item.cost * qty).toLocaleString()} Honey`
+                  ? `Buy ${qty.toLocaleString()}× · ${total.toLocaleString()} Honey`
                   : owned
                     ? "Equip"
                     : `Buy & equip · ${item.cost.toLocaleString()} Honey`}
@@ -175,7 +179,7 @@ export default function ShopExperience({
               <option value="max">Buy max</option>
             </select>
           </label>
-          <small>Total: {(item.cost * qty).toLocaleString()} Honey</small>
+          <small>Total: {total.toLocaleString()} Honey</small>
         </div>
       )}
       <div className="shop-carousel-controls">

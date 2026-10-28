@@ -1,3 +1,6 @@
+import { BLACK_BEAR_QUESTS } from "./quests";
+import importedMap from "./imported-map.json";
+import { importedSurface } from "../world/imported-terrain";
 export type Color = "white" | "red" | "blue";
 export type Vec = { x: number; y: number; z: number };
 export type Field = Vec & {
@@ -7,117 +10,10 @@ export type Field = Vec & {
   biome: string;
   colors: [number, number, number];
   width: number;
+  depth?: number;
 };
-const field = (
-  id: string,
-  name: string,
-  x: number,
-  z: number,
-  y: number,
-  gate: number,
-  biome: string,
-  colors: [number, number, number],
-): Field => ({ id, name, x, z, y, gate, biome, colors, width: 21 });
-export const FIELDS: Field[] = [
-  field(
-    "sunflower",
-    "Sunflower Field",
-    -27,
-    34,
-    0,
-    0,
-    "sunflower",
-    [0.8, 0.1, 0.1],
-  ),
-  field(
-    "dandelion",
-    "Dandelion Field",
-    0,
-    8,
-    0,
-    0,
-    "dandelion",
-    [0.7, 0.15, 0.15],
-  ),
-  field(
-    "mushroom",
-    "Mushroom Field",
-    31,
-    34,
-    0,
-    0,
-    "mushroom",
-    [0.25, 0.65, 0.1],
-  ),
-  field("blue", "Blue Flower Field", -46, -3, 0, 0, "blue", [0.2, 0.1, 0.7]),
-  field("clover", "Clover Field", 44, -4, 0, 0, "clover", [0.5, 0.25, 0.25]),
-  field("spider", "Spider Field", 0, -37, 8, 5, "spider", [0.7, 0.15, 0.15]),
-  field("bamboo", "Bamboo Field", -46, -65, 8, 5, "bamboo", [0.2, 0.1, 0.7]),
-  field(
-    "strawberry",
-    "Strawberry Field",
-    44,
-    -65,
-    8,
-    5,
-    "strawberry",
-    [0.15, 0.75, 0.1],
-  ),
-  field(
-    "pineapple",
-    "Pineapple Patch",
-    -52,
-    -112,
-    16,
-    10,
-    "pineapple",
-    [0.6, 0.2, 0.2],
-  ),
-  field("stump", "Stump Field", -26, -109, 16, 10, "stump", [0.8, 0.1, 0.1]),
-  field("cactus", "Cactus Field", 25, -93, 20, 15, "cactus", [0.4, 0.35, 0.25]),
-  field(
-    "pumpkin",
-    "Pumpkin Patch",
-    54,
-    -93,
-    20,
-    15,
-    "pumpkin",
-    [0.4, 0.35, 0.25],
-  ),
-  field(
-    "pine",
-    "Pine Tree Forest",
-    25,
-    -122,
-    20,
-    15,
-    "pine",
-    [0.15, 0.1, 0.75],
-  ),
-  field("rose", "Rose Field", 54, -122, 20, 15, "rose", [0.1, 0.8, 0.1]),
-  field(
-    "mountain",
-    "Mountain Top Field",
-    0,
-    -157,
-    32,
-    25,
-    "mountain",
-    [0.34, 0.33, 0.33],
-  ),
-  field(
-    "coconut",
-    "Coconut Field",
-    22,
-    -218,
-    44,
-    35,
-    "coconut",
-    [0.7, 0.15, 0.15],
-  ),
-  field("pepper", "Pepper Patch", 57, -218, 44, 35, "pepper", [0.1, 0.8, 0.1]),
-];
+export const FIELDS: Field[] = importedMap.fields.map((f) => ({ ...f, colors: f.colors as [number, number, number] }));
+// Legacy coordinates remain available to the archived procedural scenery component.
 export const PLATFORMS = [
   { x: 0, z: 30, w: 140, d: 100, y: 0, gate: 0 },
   { x: 0, z: -50, w: 140, d: 60, y: 8, gate: 5 },
@@ -195,126 +91,8 @@ export const HIVE_PADS = [-60, -40, -20, 0, 20, 40].map((x, index) => ({
   index,
 }));
 export const HIVE = { x: 0, y: 0, z: 61 };
-export type Gear = {
-  id: string;
-  name: string;
-  description: string;
-  cost: number;
-  gate: number;
-  icon: string;
-  type: "tool" | "bag" | "boots" | "hat";
-  range?: number;
-  power?: number;
-  interval?: number;
-  shape?: "circle" | "line" | "cone";
-  color?: Color;
-  capacity?: number;
-  speed?: number;
-  convert?: number;
-};
-const names = [
-  "Scooper",
-  "Rake",
-  "Clippers",
-  "Magnet",
-  "Vacuum",
-  "Super-Scooper",
-  "Pulsar",
-  "Electro-Magnet",
-  "Scissors",
-  "Honey Dipper",
-  "Bubble Wand",
-  "Scythe",
-  "Golden Rake",
-  "Spark Staff",
-  "Porcelain Dipper",
-  "Petal Wand",
-  "Tide Popper",
-  "Dark Scythe",
-  "Gummyballer",
-];
-const costs = [
-  0, 800, 2200, 5500, 14000, 32000, 125000, 300000, 850000, 1500000, 3500000,
-  3500000, 20000000, 60000000, 150000000, 1500000000, 2500000000000,
-  2500000000000, 10000000000000,
-];
-export const TOOLS: Gear[] = names.map((name, i) => ({
-  id: `tool-${i}`,
-  name,
-  description: `${name}: collects nearby flower tiles using a ${i % 3 === 1 ? "line" : i % 3 === 2 ? "cone" : "circle"} pattern.`,
-  cost: costs[i],
-  gate: i < 6 ? 0 : i < 12 ? 10 : i < 15 ? 25 : 35,
-  icon: "",
-  type: "tool",
-  range: 2.8 + i * 0.35,
-  power: 2 + i * 2,
-  interval: Math.max(0.18, 0.8 - i * 0.035),
-  shape: i % 3 === 1 ? "line" : i % 3 === 2 ? "cone" : "circle",
-  color: i === 10 ? "blue" : i === 11 || i === 17 ? "red" : "white",
-}));
-export const BAGS: Gear[] = [
-  "Pouch",
-  "Jar",
-  "Backpack",
-  "Canister",
-  "Port-O-Hive",
-  "Porcelain Port-O-Hive",
-  "Coconut Canister",
-  "Coconut Belt",
-].map((name, i) => ({
-  id: `bag-${i}`,
-  name,
-  description: `Capacity: ${[200, 750, 3500, 10000, 250000, 500000, 2500000, 5000000][i].toLocaleString()} pollen.`,
-  cost: [0, 650, 5500, 22000, 250000, 250000000, 25000000000, 7500000000000][i],
-  gate: [0, 0, 0, 0, 10, 25, 35, 35][i],
-  type: "bag",
-  icon: "",
-  capacity: [200, 750, 3500, 10000, 250000, 500000, 2500000, 5000000][i],
-  convert: 1 + i * 0.6,
-}));
-export const EXTRAS: Gear[] = [
-  {
-    id: "boots-1",
-    name: "Basic Boots",
-    description: "Move 20% faster on every trail.",
-    cost: 350,
-    gate: 0,
-    type: "boots",
-    icon: "♟",
-    speed: 1.2,
-  },
-  {
-    id: "boots-2",
-    name: "Beekeeper’s Boots",
-    description: "Move 45% faster. Made for long climbs.",
-    cost: 15000,
-    gate: 10,
-    type: "boots",
-    icon: "♟",
-    speed: 1.45,
-  },
-  {
-    id: "hat-1",
-    name: "Propeller Hat",
-    description: "Gather 15% more pollen.",
-    cost: 600,
-    gate: 0,
-    type: "hat",
-    icon: "♙",
-    power: 1.15,
-  },
-  {
-    id: "hat-2",
-    name: "Beekeeper’s Mask",
-    description: "Gather 40% more pollen.",
-    cost: 45000,
-    gate: 15,
-    type: "hat",
-    icon: "♛",
-    power: 1.4,
-  },
-];
-export const GEAR = [...TOOLS, ...BAGS, ...EXTRAS];
+export { TOOLS, BAGS, EXTRAS, GEAR } from "./equipment";
+export type { Gear } from "./equipment";
 export { BEES } from "./bees";
 export type { BeeDefinition as BeeDef } from "./bees";
 export type Place = Vec & {
@@ -329,7 +107,8 @@ export type Place = Vec & {
     | "daily"
     | "challenge"
     | "cannon"
-    | "tickets";
+    | "tickets"
+    | "guild";
   gate: number;
   role?: string;
   accent: string;
@@ -343,6 +122,36 @@ export const EVENT_OFFERS = [
   { kind: "bee-43", cost: 500 },
 ];
 export const PLACES: Place[] = [
+  {
+    id: "treat-shop",
+    name: "Treat Shop",
+    kind: "eggs",
+    x: -61,
+    y: 0,
+    z: 44,
+    gate: 0,
+    accent: "#ad784f",
+  },
+  {
+    id: "jelly-shop",
+    name: "Royal Jelly Shop",
+    kind: "eggs",
+    x: 64,
+    y: 0,
+    z: 5,
+    gate: 0,
+    accent: "#79a5e9",
+  },
+  {
+    id: "guild",
+    name: "Badge Bearer’s Guild",
+    kind: "guild",
+    x: 65,
+    y: 20,
+    z: -108,
+    gate: 15,
+    accent: "#efdf7a",
+  },
   {
     id: "tickets",
     name: "Ticket Tent",
@@ -579,6 +388,8 @@ export type Quest = {
   egg: number;
   treat: number;
   repeat?: boolean;
+  tickets?: number;
+  rewards?: Record<string, number>;
 };
 const giverIds = [
   "juniper",
@@ -640,89 +451,93 @@ const questTitles = [
     "Endless summer",
   ],
 ];
-export const QUESTS: Quest[] = giverIds.flatMap((npc, n) =>
-  Array.from({ length: 5 }, (_, i) => {
-    let objectives: Objective[] = [
-      {
-        event: "pollen",
-        amount: (n + 1) * (i + 1) * 100,
-        label: "Gather pollen",
-      },
-    ];
-    if (n === 1)
-      objectives = [
+const OTHER_QUESTS: Quest[] = giverIds
+  .filter((npc) => npc !== "juniper")
+  .flatMap((npc, n) =>
+    Array.from({ length: 5 }, (_, i) => {
+      n = giverIds.indexOf(npc);
+      let objectives: Objective[] = [
         {
-          event: "color",
-          target: i % 2 ? "blue" : "red",
-          amount: (i + 1) * 120,
-          label: `Gather ${i % 2 ? "blue" : "red"} pollen`,
+          event: "pollen",
+          amount: (n + 1) * (i + 1) * 100,
+          label: "Gather pollen",
         },
       ];
-    if (n === 2)
-      objectives = [
-        i % 2 === 0
-          ? { event: "hatch", amount: 1 + i, label: "Hatch bees" }
-          : { event: "feed", amount: 3 * (i + 1), label: "Feed treats" },
-      ];
-    if (n === 3)
-      objectives = [
-        {
-          event: i % 2 ? "token" : "kill",
-          amount: i % 2 ? 5 * (i + 1) : i + 1,
-          label: i % 2 ? "Collect tokens" : "Defeat enemies",
-        },
-      ];
-    if (n === 4)
-      objectives = [
-        { event: "pollen", amount: 800 * (i + 1), label: "Gather pollen" },
-        {
-          event: "convert",
-          amount: 300 * (i + 1),
-          label: "Convert pollen to honey",
-        },
-      ];
-    if (n === 5)
-      objectives = [
-        {
-          event: "field",
-          target: i % 2 ? "rose" : "pine",
-          amount: 1000 * (i + 1),
-          label: `Gather in ${i % 2 ? "Rose Field" : "Pine Tree Forest"}`,
-        },
-      ];
-    if (n === 6)
-      objectives = [
-        {
-          event: "field",
-          target: "mountain",
-          amount: 2000 * (i + 1),
-          label: "Gather at Mountain Top Field",
-        },
-        { event: "kill", amount: i + 2, label: "Defeat mountain creatures" },
-      ];
-    return {
-      id: `${npc}-${i}`,
-      npc,
-      name: questTitles[n][i],
-      dialogue: [
-        "Every great swarm starts with a single blossom. Find a meadow and let your bees lead the way.",
-        "Follow the colors. Our mountain has a flower for every kind of bee.",
-        "Your bees are family. Give them a little time, a good meal, and room to grow.",
-        "These trails need a brave beekeeper. Keep an eye out for creatures and their treasures.",
-        "Observation, collection, discovery. The mountain is our living laboratory.",
-        "There is always another path to explore. Meet me among the high flowers.",
-        "You have come a long way, little keeper. Let us see what your swarm can really do.",
-      ][n],
-      gate: [0, 0, 0, 5, 10, 15, 25][n],
-      previous: i ? `${npc}-${i - 1}` : undefined,
-      objectives,
-      honey: (n + 1) * (i + 1) * 150,
-      egg: i === 1 || i === 4 ? 1 : 0,
-      treat: (i + 1) * 3,
-      repeat: i === 4,
-    };
-  }),
-);
+      if (n === 1)
+        objectives = [
+          {
+            event: "color",
+            target: i % 2 ? "blue" : "red",
+            amount: (i + 1) * 120,
+            label: `Gather ${i % 2 ? "blue" : "red"} pollen`,
+          },
+        ];
+      if (n === 2)
+        objectives = [
+          i % 2 === 0
+            ? { event: "hatch", amount: 1 + i, label: "Hatch bees" }
+            : { event: "feed", amount: 3 * (i + 1), label: "Feed treats" },
+        ];
+      if (n === 3)
+        objectives = [
+          {
+            event: i % 2 ? "token" : "kill",
+            amount: i % 2 ? 5 * (i + 1) : i + 1,
+            label: i % 2 ? "Collect tokens" : "Defeat enemies",
+          },
+        ];
+      if (n === 4)
+        objectives = [
+          { event: "pollen", amount: 800 * (i + 1), label: "Gather pollen" },
+          {
+            event: "convert",
+            amount: 300 * (i + 1),
+            label: "Convert pollen to honey",
+          },
+        ];
+      if (n === 5)
+        objectives = [
+          {
+            event: "field",
+            target: i % 2 ? "rose" : "pine",
+            amount: 1000 * (i + 1),
+            label: `Gather in ${i % 2 ? "Rose Field" : "Pine Tree Forest"}`,
+          },
+        ];
+      if (n === 6)
+        objectives = [
+          {
+            event: "field",
+            target: "mountain",
+            amount: 2000 * (i + 1),
+            label: "Gather at Mountain Top Field",
+          },
+          { event: "kill", amount: i + 2, label: "Defeat mountain creatures" },
+        ];
+      return {
+        id: `${npc}-${i}`,
+        npc,
+        name: questTitles[n][i],
+        dialogue: [
+          "Every great swarm starts with a single blossom. Find a meadow and let your bees lead the way.",
+          "Follow the colors. Our mountain has a flower for every kind of bee.",
+          "Your bees are family. Give them a little time, a good meal, and room to grow.",
+          "These trails need a brave beekeeper. Keep an eye out for creatures and their treasures.",
+          "Observation, collection, discovery. The mountain is our living laboratory.",
+          "There is always another path to explore. Meet me among the high flowers.",
+          "You have come a long way, little keeper. Let us see what your swarm can really do.",
+        ][n],
+        gate: [0, 0, 0, 5, 10, 15, 25][n],
+        previous: i ? `${npc}-${i - 1}` : undefined,
+        objectives,
+        honey: (n + 1) * (i + 1) * 150,
+        egg: i === 1 || i === 4 ? 1 : 0,
+        treat: (i + 1) * 3,
+        repeat: i === 4,
+      };
+    }),
+  );
+export const QUESTS: Quest[] = [...BLACK_BEAR_QUESTS, ...OTHER_QUESTS];
 export const RARITY_COLORS: Record<string, string> = {
   Common: "#a9b9a2",
   Rare: "#74b9d5",
@@ -816,3 +631,19 @@ export const ENEMY_SPAWNS = [
   { type: 7, x: 15, z: -163, y: 32, gate: 25 },
   { type: 6, x: 38, z: -221, y: 44, gate: 35 },
 ];
+
+// Stable progression IDs now use coordinates measured from the supplied map.
+HIVE_PADS.splice(0, HIVE_PADS.length, ...importedMap.hives);
+Object.assign(HIVE, HIVE_PADS[2]);
+for (const place of PLACES) {
+  const measured = importedMap.places[place.id as keyof typeof importedMap.places];
+  if (measured) {
+    Object.assign(place, measured);
+    place.y = importedSurface(place.x, place.z, place.y) ?? place.y;
+  }
+}
+const enemyFields = ["mushroom", "blue", "spider", "bamboo", "pineapple", "rose", "pine", "mountain", "coconut"];
+ENEMY_SPAWNS.forEach((enemy, i) => {
+  const field = FIELDS.find((f) => f.id === enemyFields[i])!;
+  Object.assign(enemy, { x: field.x + 5, y: field.y, z: field.z + 5, gate: field.gate });
+});

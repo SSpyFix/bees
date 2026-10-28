@@ -1,6 +1,9 @@
+import { ITEM_NAMES } from '../game/data/progression';
+import { assignHotbar } from '../game/systems/item-actions';
+import { activateHotbar, beginItemDrag, endItemDrag, useItemDrag } from '../game/systems/item-drag';
 import TokenIcon from "./TokenIcon";
 import { MenuIcon, ItemIcon } from "./GameIcons";
-import { ABILITIES } from "../game/data/abilities";
+import { abilityInfo } from "../game/data/abilities";
 import { useEffect, useState } from "react";
 import { useGame, sound } from "../game/systems/store";
 import {
@@ -11,12 +14,9 @@ import {
   claimHive,
   interactPlace,
   startConversion,
-  useItem,
-  feed,
-  reroll,
 } from "../game/systems/simulation";
-import { TOOLS, QUESTS, PLACES } from "../game/data/content";
-import { BeeIcon, GearArt, HoneyIcon } from "./Icons";
+import { TOOLS } from "../game/data/content";
+import { BeeIcon, GearArt, ItemIcon as MaterialIcon } from "./Icons";
 import { MountainMap, number } from "./Menus";
 import type { Menu } from "../game/systems/store";
 export default function HUD() {
@@ -53,63 +53,13 @@ export default function HUD() {
   };
   const interact = () => {
     if (near) {
-      if (["shop", "eggs", "npc", "tickets"].includes(near.kind))
+      if (["shop", "eggs", "npc", "tickets", "guild"].includes(near.kind))
         open(near.kind as Menu, near.id);
       else perform(() => interactPlace(s, near.id));
     } else if (pad && pad.index !== s.hive)
       perform(() => claimHive(s, pad.index));
     else if (hive) open("hive");
   };
-  const slots = [
-    {
-      key: "1",
-      label: tool.name,
-      type: "tool",
-      level: Number(s.tool.split("-")[1]),
-      fn: () => sound(500),
-      count: undefined,
-    },
-    {
-      key: "2",
-      label: "Basic Egg",
-      type: "egg",
-      level: 0,
-      fn: () => perform(() => useItem(s, "egg")),
-      count: s.inventory.egg,
-    },
-    {
-      key: "3",
-      label: "Field Dice",
-      type: "bag",
-      level: 2,
-      fn: () => perform(() => useItem(s, "booster")),
-      count: s.inventory.booster,
-    },
-    {
-      key: "4",
-      label: "Micro-Converter",
-      type: "bag",
-      level: 1,
-      fn: () => perform(() => useItem(s, "converter")),
-      count: s.inventory.converter,
-    },
-    {
-      key: "5",
-      label: "Treat",
-      type: "bag",
-      level: 0,
-      fn: () => perform(() => feed(s, s.bees[0].id)),
-      count: s.inventory.treat,
-    },
-    {
-      key: "6",
-      label: "Royal Jelly",
-      type: "egg",
-      level: 2,
-      fn: () => perform(() => reroll(s, s.bees[0].id)),
-      count: s.inventory.jelly,
-    },
-  ];
   return (
     <div
       className={`hud ${menu ? "menu-is-open" : ""} ${shopContext ? "in-shop" : ""}`}
@@ -154,7 +104,7 @@ export default function HUD() {
         {s.buffs.map((b) => (
           <div
             key={b.kind}
-            title={`${ABILITIES[b.kind]?.name ?? b.kind}: ${Math.ceil(b.remaining)}s`}
+            title={`${abilityInfo(b.kind).name}: ${Math.ceil(b.remaining)}s`}
           >
             <TokenIcon kind={b.kind} size={26} />
             <span>×{Number(b.value.toFixed(2))}</span>
@@ -169,6 +119,7 @@ export default function HUD() {
           { menu: "hive", label: "Hive", icon: "hive" },
           { menu: "settings", label: "Settings", icon: "settings" },
           { menu: "map", label: "Map", icon: "map" },
+          { menu: "badges", label: "Badges", icon: "hive" },
         ].map((t) => (
           <button
             key={t.menu}
@@ -184,7 +135,7 @@ export default function HUD() {
           title="Nearby shop"
           aria-label="Open nearby shop"
           onClick={() => {
-            if (near && ["shop", "eggs", "tickets"].includes(near.kind))
+            if (near && ["shop", "eggs", "tickets", "guild"].includes(near.kind))
               interact();
             else
               perform(() => {
@@ -243,7 +194,7 @@ export default function HUD() {
             <kbd>E</kbd>
             {near.kind === "npc"
               ? `Talk to ${near.name}`
-              : ["shop", "eggs", "tickets"].includes(near.kind)
+              : ["shop", "eggs", "tickets", "guild"].includes(near.kind)
                 ? `Open ${near.name}`
                 : near.name}
           </button>
@@ -268,50 +219,30 @@ export default function HUD() {
       </div>
       <footer className="bottom-hud">
         <nav className="hotbar" aria-label="Item hotbar">
-          {slots.map((slot, i) => (
-            <button
-              key={slot.key}
-              aria-label={slot.label}
-              title={slot.label}
-              onClick={slot.fn}
-              className={i === 0 ? "selected-tool" : ""}
-            >
-              <span className="hotkey">{slot.key}</span>
-              {i === 0 ? (
-                <GearArt type="tool" level={slot.level} />
-              ) : (
-                <ItemIcon
-                  id={
-                    ["tool", "egg", "booster", "converter", "treat", "jelly"][i]
-                  }
-                />
-              )}
-              <b className="item-count">
-                {slot.count === undefined ? "" : number(slot.count)}
-              </b>
-            </button>
-          ))}
-          {[
-            {
-              key: "7",
-              label: "Inventory",
-              icon: "inventory",
-              menu: "inventory",
-            },
-            { key: "8", label: "Hive", icon: "hive", menu: "hive" },
-            { key: "9", label: "Bees", icon: "bees", menu: "bees" },
-            { key: "0", label: "Map", icon: "map", menu: "map" },
-          ].map((t) => (
-            <button
-              key={t.key}
-              aria-label={t.label}
-              title={t.label}
-              onClick={() => open(t.menu as Menu)}
-            >
-              <span className="hotkey">{t.key}</span>
-              <MenuIcon kind={t.icon} />
-            </button>
-          ))}
+          <button aria-label={tool.name} title={`${tool.name} · Fixed tool slot`} className="selected-tool" data-hotbar-slot="1">
+            <span className="hotkey">1</span><GearArt type="tool" level={Number(s.tool.split('-')[1])} />
+          </button>
+          {s.hotbar.map((item, index) => {
+            const slot = index + 2;
+            const label = item ? ITEM_NAMES[item] ?? item : `Empty slot ${slot === 10 ? 0 : slot}`;
+            return <button key={slot} data-hotbar-slot={slot} aria-label={label}
+              title={`${label} · Drag an inventory item here${item ? ' · Right-click to clear' : ''}`}
+              draggable={!!item && (s.inventory[item] ?? 0) > 0}
+              onDragStart={event => item && beginItemDrag(event, item)} onDragEnd={endItemDrag}
+              onDragOver={event => { if (useItemDrag.getState().item) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; event.currentTarget.classList.add('drop-hover'); } }}
+              onDragLeave={event => event.currentTarget.classList.remove('drop-hover')}
+              onDrop={event => {
+                event.preventDefault(); event.currentTarget.classList.remove('drop-hover');
+                const item = useItemDrag.getState().item;
+                if (item && assignHotbar(s, slot, item)) { useGame.getState().refresh(); useGame.getState().save(); }
+                endItemDrag();
+              }}
+              onContextMenu={event => { event.preventDefault(); assignHotbar(s, slot, null); useGame.getState().refresh(); useGame.getState().save(); }}
+              onClick={() => activateHotbar(slot)}>
+              <span className="hotkey">{slot === 10 ? 0 : slot}</span>
+              {item && <>{['egg', 'jelly', 'treat', 'starTreat', 'converter', 'booster', 'ticket'].includes(item) ? <ItemIcon id={item} /> : <MaterialIcon kind={item} size={33} />}<b className="item-count">{number(s.inventory[item] ?? 0)}</b></>}
+            </button>;
+          })}
         </nav>
       </footer>
       <span className="sr-only" data-testid="player-height">

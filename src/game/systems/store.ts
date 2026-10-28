@@ -14,6 +14,8 @@ export type Menu =
   | "shop"
   | "eggs"
   | "tickets"
+  | "guild"
+  | "badges"
   | "hive"
   | "bees"
   | "quests"

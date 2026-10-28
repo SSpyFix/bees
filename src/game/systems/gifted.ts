@@ -1,4 +1,4 @@
-import { BAGS, FIELDS } from "../data/content";
+import { updateCapacity as updateProgressionCapacity } from "./modifiers";
 import type { Game, Bee } from "./types";
 export type GiftedBonus = { key: string; value: number; label: string };
 const bonus = (key: string, value: number, label: string): GiftedBonus => ({
@@ -80,32 +80,18 @@ export function hiveBonus(s: Game, key: string) {
       if (value?.key === key)
         total = additive.has(key) ? total + value.value : total * value.value;
     }
-  return total;
+  const rank = (id: string) => s.badges[id] ?? 0;
+  const multipliers: Record<string, number> = {
+    red: 1 + rank("strawberry") * 0.05, blue: 1 + rank("bamboo") * 0.05,
+    white: (rank("spider") ? 1.05 + rank("spider") * 0.05 : 1) * (1 + rank("coconut") * 0.04),
+    tool: 1 + rank("stump") * 0.05, "gifted-pollen": 1 + rank("mountain") * 0.01,
+    "bee-speed": 1 + rank("playtime") * 0.01, flame: 1 + rank("pepper") * 0.05,
+    convert: (1 + rank("honey") * 0.3) * (1 + rank("pumpkin") * 0.2),
+  };
+  const additions: Record<string, number> = { "critical-power": [0, 0.1, 0.2, 0.4, 0.7, 1][rank("battle")], "honey-per-pollen": rank("goo") * 0.02, instant: rank("cactus") * 0.01, "instant-red": rank("mushroom") * 0.03, "instant-blue": rank("blue") * 0.03, "instant-white": rank("pineapple") * 0.03 };
+  return (total + (additions[key] ?? 0)) * (multipliers[key] ?? 1);
 }
 export const giftedStats = (b: Bee) => (b.gifted ? 1.5 : 1);
 export const giftedBonusLabel = (kind: string) =>
   GIFTED_BONUSES[Number(kind.slice(4))]?.label ?? "";
-export function updateCapacity(s: Game) {
-  const field = FIELDS.find(
-    (f) =>
-      Math.abs(f.x - s.player.x) < f.width / 2 &&
-      Math.abs(f.z - s.player.z) < f.width / 2 &&
-      Math.abs(f.y - s.player.y) < 3,
-  );
-  let fieldBonus = 1;
-  if (field) {
-    const color = (["white", "red", "blue"] as const)[
-      field.colors.indexOf(Math.max(...field.colors))
-    ];
-    fieldBonus = hiveBonus(s, `${color}-capacity`);
-  }
-  // Carried pollen is conserved if a temporary field capacity bonus disappears.
-  s.capacity = Math.max(
-    s.pollen,
-    Math.round(
-      (BAGS.find((b) => b.id === s.bag)?.capacity ?? 200) *
-        hiveBonus(s, "capacity") *
-        fieldBonus,
-    ),
-  );
-}
+export function updateCapacity(s: Game) { updateProgressionCapacity(s); }

@@ -44,7 +44,7 @@ test("front-only bee faces, transparent popups, icon tokens and ground marker po
     return { faces, textAlpha, iconMaps, posts };
   });
   await page.screenshot({
-    path: "/workspace/work/bee-1.1.2/marks-and-tokens.png",
+    path: "test-results/marks-and-tokens.png",
   });
   expect(info.faces).toBe(1);
   expect(info.textAlpha).toBe(0);

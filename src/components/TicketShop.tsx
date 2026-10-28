@@ -1,24 +1,15 @@
-import { abilityNames } from "../game/data/abilities";
 import { BEES, EVENT_OFFERS } from "../game/data/content";
 import { useState } from "react";
-import {
-  buyEventBee,
-  buyStarTreats,
-  MAX_ITEMS,
-} from "../game/systems/simulation";
+import { buyEventBee, buyTicketItem, buyStarTreats, MAX_ITEMS } from "../game/systems/simulation";
+import { abilityNames } from "../game/data/abilities";
+import { TICKET_ITEMS, ITEM_NAMES } from "../game/data/progression";
 import { useGame, sound } from "../game/systems/store";
-import { BeeIcon } from "./Icons";
+import { BeeIcon, ItemIcon } from "./Icons";
 export default function TicketShop() {
   const { game: s, revision } = useGame();
-  void revision;
   const [quantity, setQuantity] = useState("1");
-  const starCount =
-    quantity === "max"
-      ? Math.min(
-          Math.floor(s.inventory.ticket / 1000),
-          MAX_ITEMS - s.inventory.starTreat,
-        )
-      : Number(quantity);
+  const starCount = quantity === "max" ? Math.min(Math.floor(s.inventory.ticket / 1000), MAX_ITEMS - s.inventory.starTreat) : Number(quantity);
+  void revision;
   return (
     <>
       <div className="shop-banner">
@@ -28,42 +19,40 @@ export default function TicketShop() {
         </div>
         <div className="wallet">🎟 {s.inventory.ticket} tickets</div>
       </div>
-      <article className="bulk-purchase">
-        <h3>★ Star Treat</h3>
-        <p>
-          Makes any bee gifted without changing its species or level. Costs
-          1,000 tickets each.
-        </p>
-        <label>
-          Star Treat quantity
-          <select
-            aria-label="Star Treat quantity"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-          >
-            {[1, 10, 100, 1000, 10000, 100000, 1000000].map((n) => (
-              <option key={n} value={n}>
-                {n.toLocaleString()}×
-              </option>
-            ))}
-            <option value="max">Buy max</option>
-          </select>
-        </label>
-        <p>Owned: {s.inventory.starTreat.toLocaleString()}</p>
-        <button
-          className="button"
-          disabled={starCount < 1 || s.inventory.ticket < starCount * 1000}
-          onClick={() => {
-            buyStarTreats(s, starCount);
-            useGame.getState().refresh();
-            useGame.getState().save();
-          }}
-        >
-          Buy {starCount.toLocaleString()} Star Treats ·{" "}
-          {(starCount * 1000).toLocaleString()} tickets
-        </button>
-      </article>
       <div className="shop-grid">
+        {TICKET_ITEMS.map((o) => (
+          <article className="item-card" key={o.id}>
+            <div className="item-art">
+              <ItemIcon kind={o.id} size={100} />
+            </div>
+            <h3>{ITEM_NAMES[o.id]}</h3>
+            <p>
+              {o.id === "starTreat"
+                ? "Makes a bee Gifted. Choose the bee in your hive."
+                : "Hatch from your inventory or select this egg in your hive."}
+            </p>
+            {o.id === "starTreat" && <label className="bulk-purchase">
+              Star Treat quantity
+              <select aria-label="Star Treat quantity" value={quantity} onChange={e => setQuantity(e.target.value)}>
+                {[1, 10, 100, 1000, 10000, 100000, 1000000].map(n => <option key={n} value={n}>{n.toLocaleString()}×</option>)}
+                <option value="max">Buy max</option>
+              </select>
+            </label>}
+            <button
+              className="button"
+              disabled={s.inventory.ticket < o.cost * (o.id === "starTreat" ? starCount : 1) || (o.id === "starTreat" && starCount < 1)}
+              onClick={() => {
+                if (o.id === "starTreat") buyStarTreats(s, starCount);
+                else buyTicketItem(s, o.id);
+                useGame.getState().refresh();
+                useGame.getState().save();
+                sound();
+              }}
+            >
+              🎟 {(o.cost * (o.id === "starTreat" ? starCount : 1)).toLocaleString()} · Buy{o.id === "starTreat" ? ` ${starCount.toLocaleString()} Star Treats` : ""}
+            </button>
+          </article>
+        ))}
         {EVENT_OFFERS.map((o) => {
           const b = BEES.find((b) => b.id === o.kind)!,
             owned = s.bees.some((b) => b.kind === o.kind);

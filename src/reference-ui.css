@@ -453,6 +453,19 @@ textarea {
 .reference-ui.ui-inventory .modal-content {
   padding: 0;
 }
+.reference-ui .inventory-heading {
+  gap: 7px;
+  padding: 6px;
+  margin-bottom: 6px;
+}
+.reference-ui .inventory-heading > .bss-item-icon {
+  width: 35px;
+  height: 35px;
+  flex-shrink: 0;
+}
+.reference-ui .inventory-heading > span {
+  font-size: 10px;
+}
 .bss-inventory-list {
   display: grid;
   gap: 6px;
@@ -1368,3 +1381,20 @@ h4 {
 .reference-ui .ability-list .ability-token-icon {
   flex-shrink: 0;
 }
+
+/* Center the complete ten-slot row at every viewport size. */
+.hud .bottom-hud { position: fixed; left: 0; right: 0; width: 100%; max-width: none; transform: none; display: flex; justify-content: center; }
+.hud .hotbar { width: max-content; max-width: calc(100vw - 8px); gap: 3px; box-sizing: border-box; }
+.hud .hotbar > button { flex: 0 0 clamp(24px, 3.8vw, 42px); width: clamp(24px, 3.8vw, 42px); min-width: 0; }
+.hud .hotbar > button > svg { width: min(33px, 100%); height: min(33px, 100%); }
+.hud .hotbar > button.drop-hover { border-color: #fff258; background: #718d68; }
+.bss-inventory-row[draggable="true"] { cursor: grab; }
+.bss-inventory-row[draggable="true"]:active { cursor: grabbing; }
+.item-confirm-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: #0004; }
+.item-confirm { width: min(340px, calc(100vw - 24px)); padding: 16px; color: #253238; background: #f7f3cd; border: 2px solid #929b87; text-shadow: none; }
+.item-confirm h3 { margin: 0 0 10px; }
+.item-confirm p { font-size: 14px; line-height: 1.5; }
+.item-confirm select { display: block; width: 100%; margin: 10px 0; }
+.item-confirm > div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.item-confirm button { border: 1px solid #8a998d; padding: 8px 12px; background: #d5e9c0; cursor: pointer; }
+.item-confirm button:disabled { opacity: .45; cursor: default; }
