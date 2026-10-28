@@ -1,5 +1,5 @@
-import { EGGS, type EggKind } from '../data/progression';
-import { MAX_ITEMS, notify } from './simulation';
+import { EGGS, MAX_BEE_LEVEL, type EggKind } from '../data/progression';
+import { MAX_ITEMS, notify, event } from './simulation';
 import type { Game } from './types';
 
 export function grantAdminEgg(s: Game, egg: EggKind, gifted: boolean) {
@@ -16,4 +16,15 @@ export function grantCraftingMaterials(s: Game) {
     if (!(key in EGGS) && !['ticket', 'booster', 'converter', 'starTreat'].includes(key))
       s.inventory[key] = Math.min(MAX_ITEMS, s.inventory[key] + 999);
   notify(s, 'Added 999 of each crafting material.');
+}
+
+export function maxLevelAllBees(s: Game) {
+  let levels=0;
+  for(const bee of s.bees) {
+    levels+=Math.max(0,MAX_BEE_LEVEL-bee.level);
+    bee.level=MAX_BEE_LEVEL;
+    bee.bond=0;
+  }
+  if(levels>0){s.stats.levels+=levels;event(s,'level',levels);}
+  notify(s,`All bees are now level ${MAX_BEE_LEVEL}.`);
 }

@@ -1,9 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { createGame, harvest, collect, awardHoney, hatch, serialize, restore } from '../game/systems/simulation';
+import { createGame, newBee, harvest, collect, awardHoney, hatch, serialize, restore } from '../game/systems/simulation';
 import { BEES } from '../game/data/content';
-import { grantAdminEgg, grantCraftingMaterials } from '../game/systems/admin';
+import { grantAdminEgg, grantCraftingMaterials, maxLevelAllBees } from '../game/systems/admin';
+import { BOND_REQUIREMENTS } from '../game/data/progression';
 
 describe('admin tools', () => {
+  it('maxes every owned bee and saves levels without changing species, gifted status or inventory',()=>{
+    const s=createGame();s.bees.push(newBee(s,'bee-26'));
+    s.bees[1].level=9;s.bees[1].bond=12;s.bees[1].gifted=true;
+    const identities=s.bees.map(b=>({id:b.id,kind:b.kind,gifted:b.gifted}));
+    const items={...s.inventory},honey=s.honey;
+    maxLevelAllBees(s);
+    expect(s.bees.every(b=>b.level===BOND_REQUIREMENTS.length+1&&b.bond===0)).toBe(true);
+    expect(s.bees.map(b=>({id:b.id,kind:b.kind,gifted:b.gifted}))).toEqual(identities);
+    expect(s.inventory).toEqual(items);expect(s.honey).toBe(honey);
+    expect(s.stats.levels).toBe(40);
+    maxLevelAllBees(s);expect(s.stats.levels).toBe(40);
+    expect(restore(serialize(s)).bees.every(b=>b.level===BOND_REQUIREMENTS.length+1)).toBe(true);
+  });
   it('gives ten times the pollen from real tiles without depleting them ten times faster',()=>{
     const normal=createGame(),boosted=createGame();
     for(const s of [normal,boosted]) {

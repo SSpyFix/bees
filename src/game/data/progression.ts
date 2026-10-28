@@ -51,6 +51,7 @@ export const BOND_REQUIREMENTS = [
 ];
 export const bondRequired = (level: number) =>
   BOND_REQUIREMENTS[level - 1] ?? Infinity;
+export const MAX_BEE_LEVEL = BOND_REQUIREMENTS.length + 1;
 export const TICKET_ITEMS = [
   { id: "silverEgg", cost: 50 },
   { id: "goldEgg", cost: 100 },

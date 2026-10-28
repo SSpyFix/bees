@@ -261,3 +261,18 @@ for(const gate of map.gates) test(`walks through the actual ${gate.bees}-bee doo
  await page.keyboard.up('w');
  await page.screenshot({path:`test-results/${g.bees}-bee-gate-open.png`});
 });
+
+
+test('admin max-level button upgrades every owned bee and saves it',async({page})=>{
+ test.setTimeout(120000);
+ await openMap(page,{bees:[{kind:'bee-0',level:1},{kind:'bee-26',level:7,gifted:true}]});
+ await page.getByRole('button',{name:'Open settings',exact:true}).click();
+ await page.getByLabel('Admin code',{exact:true}).fill('4321');
+ await page.getByRole('button',{name:'Open admin menu',exact:true}).click();
+ await page.getByRole('button',{name:'Max level all bees',exact:true}).click();
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
+ expect(saved.bees.map((b:any)=>b.level)).toEqual([25,25]);
+ expect(saved.bees.map((b:any)=>b.kind)).toEqual(['bee-0','bee-26']);
+ expect(saved.bees.map((b:any)=>b.gifted)).toEqual([false,true]);
+ await expect(page.getByRole('complementary',{name:'Admin menu'})).toContainText('All bees are now level 25.');
+});
