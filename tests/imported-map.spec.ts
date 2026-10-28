@@ -196,3 +196,32 @@ test('collapsed admin menu can be dragged and stays visible when reopened', asyn
   expect(expanded.x).toBeGreaterThanOrEqual(0);
   expect(expanded.y+expanded.height).toBeLessThanOrEqual(800);
 });
+
+test('bees wander independently near the player and follow when walking', async ({page}) => {
+  test.setTimeout(150000);
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  await openMap(page);
+  await page.evaluate(async()=>{
+    const state=(await import('/src/game/systems/store.ts')).useGame.getState();
+    const {newBee}=await import('/src/game/systems/simulation.ts');
+    while(state.game.bees.length<8)state.game.bees.push(newBee(state.game,'bee-0'));
+    state.refresh();
+  });
+  await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.bees.filter(b=>b.wander).length),{timeout:45000}).toBe(8);
+  const before=await page.evaluate(async()=>{
+    const s=(await import('/src/game/systems/store.ts')).useGame.getState().game;
+    return {clock:s.clock,targets:s.bees.map(b=>JSON.stringify([b.wander?.x,b.wander?.z])),z:s.player.z};
+  });
+  await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.clock),{timeout:90000}).toBeGreaterThan(before.clock+4);
+  const after=await page.evaluate(async()=>{
+    const s=(await import('/src/game/systems/store.ts')).useGame.getState().game;
+    return {targets:s.bees.map(b=>JSON.stringify([b.wander?.x,b.wander?.z])),radius:Math.max(...s.bees.map(b=>Math.hypot(b.x-s.player.x,b.z-s.player.z)))};
+  });
+  expect(after.targets.filter((t,i)=>t!==before.targets[i]).length).toBeGreaterThan(3);
+  expect(after.radius).toBeLessThan(12);
+  await page.screenshot({path:'test-results/swarm-wandering.png'});
+  await page.keyboard.down('w');
+  await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z),{timeout:45000}).toBeLessThan(before.z-2);
+  await page.keyboard.up('w');
+  expect(errors).toEqual([]);
+});

@@ -33,6 +33,7 @@ export type Bee = Vec & {
   timer: number;
   abilityTimer: number;
   phase: number;
+  wander?: { x: number; y: number; z: number; remaining: number };
   gifted: boolean;
 };
 export type Enemy = Vec & {

@@ -1,4 +1,5 @@
 import { hiveModifiers, effectiveCapacity, updateCapacity } from "./modifiers";
+import { followBee } from './bee-follow';
 import { BADGES, RECIPES, SPRINKLERS } from "../data/support";
 import { badgeProgress } from "./badges";
 import { tickCraft } from "./crafting";
@@ -1223,15 +1224,7 @@ function swarm(s: Game, dt: number) {
     if (!field || s.pollen >= s.capacity || distance(b, s.player) > 24) {
       spawnBeeAbilities(s, b, field ? "gather" : "idle");
       b.state = "following";
-      const angle = index * 2.399 + s.clock * 0.12;
-      fly(
-        b,
-        s.player.x + Math.cos(angle) * (2.5 + (index % 3)),
-        s.player.y + 2.4 + (index % 3) * 0.45,
-        s.player.z + Math.sin(angle) * (2.5 + (index % 3)),
-        dt,
-        speed,
-      );
+      followBee(s,b,dt,speed,()=>random(s));
       return;
     }
     if (
@@ -1299,15 +1292,7 @@ function swarm(s: Game, dt: number) {
       gatherPassive(s, b);
       spawnBeeAbilities(s, b, "gather");
     }
-    if (b.state === "returning")
-      fly(
-        b,
-        s.player.x + Math.cos(b.phase) * 2,
-        s.player.y + 2.5,
-        s.player.z + Math.sin(b.phase) * 2,
-        dt,
-        speed,
-      );
+    if (b.state === "returning") followBee(s,b,dt,speed,()=>random(s));
   });
 }
 function enemies(s: Game, dt: number) {

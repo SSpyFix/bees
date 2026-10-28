@@ -13,22 +13,27 @@ import { Box, Label, BeeModel } from "./models";
 
 function BeeActor({ id }: { id: string }) {
   const group = useRef<THREE.Group>(null);
+  const target = useRef(new THREE.Vector3());
+  const initialized = useRef(false);
   const game = useGame((s) => s.game);
   const bee = game.bees.find((b) => b.id === id);
   const definition = bee ? beeDefinition(bee) : BEES[0];
-  useFrame(() => {
+  useFrame((_,dt) => {
     const b = game.bees.find((b) => b.id === id);
-    if (group.current && b) {
-      const old = group.current.position.clone();
-      group.current.position.set(
-        b.x,
-        b.y + Math.sin(game.clock * 5 + b.phase) * 0.12,
-        b.z,
-      );
-      const dx = b.x - old.x,
-        dz = b.z - old.z;
-      if (Math.abs(dx) + Math.abs(dz) > 0.001)
-        group.current.rotation.y = Math.atan2(dx, dz);
+    const actor=group.current;
+    if (actor && b) {
+      const oldX=actor.position.x, oldZ=actor.position.z;
+      target.current.set(b.x,b.y+Math.sin(game.clock*(4.2+b.phase%1.1)+b.phase)*.12,b.z);
+      if(!initialized.current || actor.position.distanceToSquared(target.current)>35*35) {
+        actor.position.copy(target.current); initialized.current=true;
+      } else actor.position.lerp(target.current,1-Math.exp(-dt*14));
+      const dx=actor.position.x-oldX,dz=actor.position.z-oldZ;
+      if(Math.hypot(dx,dz)>.002) {
+        const desired=Math.atan2(dx,dz);
+        const turn=Math.atan2(Math.sin(desired-actor.rotation.y),Math.cos(desired-actor.rotation.y));
+        actor.rotation.y+=turn*(1-Math.exp(-dt*9));
+        actor.rotation.z=THREE.MathUtils.lerp(actor.rotation.z,THREE.MathUtils.clamp(-turn*.15,-.15,.15),1-Math.exp(-dt*7));
+      } else actor.rotation.z=THREE.MathUtils.lerp(actor.rotation.z,0,1-Math.exp(-dt*7));
     }
   });
   return (

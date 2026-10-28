@@ -81,3 +81,9 @@ Yellow and Blue have rebuilt launchers near Science Bear and the Pine/Rose appro
 In Settings, enter `4321` under **Admin code**. The top-right admin panel has independent 10× pollen and honey toggles, an egg selector with a Gifted option, and **+999 crafting materials**. Granted eggs go to Inventory and use the normal hatch action; gifted eggs guarantee gifted status. Inventory and boost choices save locally. Enter the code again after reloading to reopen the controls.
 
 WASD/arrows and jumping work while menus are open, including Settings. Typing in a text field or using a selector keeps those keystrokes out of character movement.
+
+## Bee wandering
+
+Idle bees choose independent nearby destinations with varied heights, brief pauses and local spacing. Walking draws the swarm into a loose trailing cluster; distant bees catch up, and teleports regroup them. Gathering, combat and hive resting still take priority. Rendered flight and turns ease between simulation updates.
+
+Visual reference: [original-game field screenshots](https://thenerdstash.com/7-must-know-tips-to-grow-your-hive-fast-in-roblox-bee-swarm-simulator/). The browser simulation uses its own movement model.
