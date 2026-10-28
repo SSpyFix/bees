@@ -70,3 +70,30 @@ test("converts pollen at an exported hive and opens a relocated quest giver", as
   await page.keyboard.press("e");
   await expect(page.getByRole("button", { name: "Accept quest", exact: true })).toBeVisible();
 });
+
+for (const id of ['red-cannon', 'yellow-cannon', 'blue-cannon']) {
+  test(`${id} activates with E and completes its flight`, async ({page}) => {
+    test.setTimeout(150000);
+    await openMap(page);
+    const destination = await page.evaluate(async id => {
+      const {useGame}=await import('/src/game/systems/store.ts');
+      const {PLACES}=await import('/src/game/data/content.ts');
+      const {newBee}=await import('/src/game/systems/simulation.ts');
+      const state=useGame.getState(),s=state.game;
+      for(let i=1;i<25;i++)s.bees.push(newBee(s,`bee-${i}`));
+      Object.assign(s.player,PLACES.find(p=>p.id===id));
+      state.refresh();
+      return id==='red-cannon' ? 'mountain' : id==='blue-cannon' ? 'clover' : 'spawn';
+    }, id);
+    await page.keyboard.press('e');
+    await expect.poll(()=>page.evaluate(async()=>!!(await import('/src/game/systems/store.ts')).useGame.getState().game.flight)).toBe(true);
+    await expect.poll(()=>page.evaluate(async()=>!!(await import('/src/game/systems/store.ts')).useGame.getState().game.flight),{timeout:120000}).toBe(false);
+    const position=await page.evaluate(async()=>{
+      const p=(await import('/src/game/systems/store.ts')).useGame.getState().game.player;
+      return {x:p.x,z:p.z};
+    });
+    const target=destination==='spawn' ? map.spawn : map.fields.find(f=>f.id===destination)!;
+    expect(position.x).toBeCloseTo(target.x,1);
+    expect(position.z).toBeCloseTo(target.z,1);
+  });
+}

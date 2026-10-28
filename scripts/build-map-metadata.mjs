@@ -45,7 +45,11 @@ set('rowan',point('Panda Bear'),-3.1,5);set('sage',point('Science Bear'),-3.1,4)
 set('hazel',point('Polar Bear'),-3.1,4);set('orion',point('Spirit Bear'),-3.1,5);
 set('shop',point('Noob Bear'),-1.35,-5);set('shop-10',point('Pro Bear'),-1.35,5);
 set('blue-hq',point('Blue HQ'),0,0,7);set('red-hq',point('Red HQ'),0,0,-7);
-set('red-cannon',point('Red Cannon'),-4.8,-3);set('mountain-cannon',point('Shop Glider'),-3.8,5);
+set('red-cannon',point('Red Cannon'),-4.8,-3);
+// Use real cannon models when available; never attach a launcher to the glider shop.
+for (const [id,name] of [['yellow-cannon','Yellow Cannon'],['blue-cannon','Blue Cannon']]) {
+  const p=point(name); if(p) set(id,p,-4.8,-3);
+}
 set('daily',point('Honey Dispenser'),-3.1,-4);
 // These legacy activities have no identifiable interaction marker in the export.
 // Place their rebuilt stands on clear ground near the appropriate source landmark.

@@ -62,6 +62,7 @@ export function beeDefinition(b: Bee) {
 }
 export function newBee(s: Game, kind: string): Bee {
   const d = BEES.find((x) => x.id === kind) ?? BEES[0];
+  if (!s.discoveredBees.includes(d.id)) s.discoveredBees.push(d.id);
   return {
     id: `b${s.nextId++}`,
     kind: d.id,
@@ -100,6 +101,7 @@ export function createGame(): Game {
     sprinkler: -1,
     sprinklers: [],
     bees: [],
+    discoveredBees: [],
     player: {
       ...importedMap.spawn,
       yaw: Math.PI,
@@ -811,6 +813,7 @@ function jellyRoll(
     r < 0.7 ? "Rare" : r < 0.97 ? "Epic" : r < 0.99996 ? "Legendary" : "Mythic";
   const pool = BEES.filter((x) => x.rarity === rarity);
   b.kind = pool[Math.floor(random(s) * pool.length)].id;
+  for (const kind of s.bees.map(bee=>bee.kind)) if (!s.discoveredBees.includes(kind)) s.discoveredBees.push(kind);
   b.energy = beeDefinition(b).energy;
   b.gifted = item === "starJelly" || random(s) < 1 / 250;
   b.state = "following";
@@ -1000,23 +1003,32 @@ export function useItem(s: Game, id: string) {
   return false;
 }
 export function interactPlace(s: Game, id: string) {
-  if (id === "red-cannon" || id === "mountain-cannon") {
+  if (["red-cannon", "yellow-cannon", "blue-cannon"].includes(id)) {
     const cannon = PLACES.find((p) => p.id === id)!;
     if (
       s.flight ||
       distance(s.player, cannon) > 7 ||
-      Math.abs(s.player.y - cannon.y) > 2.5
+      Math.abs(s.player.y - cannon.y) > 8
     )
       return false;
-    const gate = id === "red-cannon" ? 25 : 0;
-    if (s.bees.length < gate) {
-      notify(s, `${gate} bees required to use this cannon.`);
+    const required = id === "red-cannon" ? 25 : id === "yellow-cannon" ? 12 : 16;
+    const discovered = new Set([...s.discoveredBees, ...s.bees.map(b=>b.kind)]).size;
+    if (discovered < required) {
+      notify(s, `${required} discovered bee types required (${discovered}/${required}).`);
       return false;
     }
-    const to =
-      id === "red-cannon"
-        ? { x: FIELDS.find((f) => f.id === "mountain")!.x, y: FIELDS.find((f) => f.id === "mountain")!.y, z: FIELDS.find((f) => f.id === "mountain")!.z }
-        : { x: home(s).x, y: home(s).y, z: home(s).z - 4 };
+    const now = Date.now()/1000;
+    if ((s.cooldowns.cannon ?? 0) > now) {
+      notify(s, `Cannon ready in ${Math.ceil(s.cooldowns.cannon-now)} seconds.`);
+      return false;
+    }
+    const field = FIELDS.find(f=>f.id===(id==='red-cannon' ? 'mountain' : 'clover'))!;
+    if (id==='red-cannon' && s.bees.length<25) {
+      notify(s, 'Mountain Top also requires 25 bees in your hive.');
+      return false;
+    }
+    const to = id==='yellow-cannon' ? { ...importedMap.spawn } : {x:field.x,y:field.y,z:field.z};
+    s.cooldowns.cannon = now+5;
     s.flight = {
       from: { x: s.player.x, y: s.player.y, z: s.player.z },
       to,
@@ -1406,8 +1418,8 @@ export function step(s: Game, dt: number) {
 export function nearestPlace(s: Game) {
   return PLACES.filter(
     (p) =>
-      s.bees.length >= p.gate &&
-      Math.abs(p.y - s.player.y) < 2.5 &&
+      (p.kind === "cannon" || s.bees.length >= p.gate) &&
+      Math.abs(p.y - s.player.y) < (p.kind === "cannon" ? 8 : 2.5) &&
       distance(p, s.player) < 7,
   ).sort((a, b) => distance(a, s.player) - distance(b, s.player))[0];
 }
@@ -1440,6 +1452,7 @@ export function serialize(s: Game) {
     crafting: s.crafting,
     sprinkler: s.sprinkler,
     progressionVersion: 1,
+    discoveredBees: [...new Set([...s.discoveredBees, ...s.bees.map(b=>b.kind)])],
     bees: s.bees.map(({ kind, level, bond, energy, gifted }) => ({
       kind,
       level,
@@ -1526,6 +1539,7 @@ export function restore(raw: string | null): Game {
           ),
         }));
     }
+    if (Array.isArray(d.discoveredBees)) s.discoveredBees = [...new Set([...s.discoveredBees, ...d.discoveredBees.filter((kind: unknown)=>BEES.some(b=>b.id===kind))])];
     for (const k of Object.keys(s.inventory))
       s.inventory[k] = Math.floor(
         num(d.inventory?.[k], s.inventory[k], MAX_ITEMS),

@@ -69,3 +69,9 @@ Assets use relative paths so the game works under the repository subdirectory an
 Import the public GitHub repository `SSpyFix/bees` into Vercel, or connect it to an existing Vercel project. Use the repository root as **Root Directory**. The checked-in `vercel.json` selects the **Vite** framework, installs locked dependencies with `npm ci`, builds with `npm run build`, and publishes **dist**. No environment variables or backend services are required.
 
 Pushes to `main` trigger the connected Vercel production deployment. A deployment marked **Blocked** must be reviewed in the Vercel dashboard; the repository cannot grant account access or override deployment approval. The existing project domain is `https://juuuuice.vercel.app/`; a newly imported project receives its own Vercel URL.
+
+## Transport cannons
+
+Approach a cannon and press **E** (or click its interaction button). Red launches to Mountain Top and requires 25 discovered bee types plus 25 bees for the destination gate. Yellow returns to spawn after discovering 12 types; Blue launches to Clover after discovering 16 types. Discoveries persist across transformations and reloads. The cannons share a five-second cooldown. Old saves start their discovery record from their current swarm.
+
+Yellow and Blue have rebuilt launchers near Science Bear and the Pine/Rose approach in this converted map. Their routes use the browser game's controlled flight arc; steering/gliders and exact Roblox launch physics are not implemented.

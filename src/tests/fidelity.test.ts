@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { BEES, FIELDS, PLACES, TOOLS, BAGS } from "../game/data/content";
 import {
   createGame,
+  nearestPlace,
   hatch,
   serialize,
   restore,
@@ -124,12 +125,35 @@ import {
 } from "../game/systems/simulation";
 import { solidAt, surface } from "../game/world/terrain";
 describe("rebuilt landmarks and progression", () => {
+  it("shows the red cannon before unlocking and rejects duplicate bee types", () => {
+    const s=createGame();
+    Object.assign(s.player, PLACES.find(p=>p.id==='red-cannon')!);
+    while(s.bees.length<25)s.bees.push(newBee(s,'bee-0'));
+    expect(nearestPlace(s)?.id).toBe('red-cannon');
+    expect(interactPlace(s,'red-cannon')).toBe(false);
+  });
+  it("launches yellow and blue cannons with a shared cooldown and saved discoveries", () => {
+    const s=createGame();
+    for(let i=1;i<16;i++)s.bees.push(newBee(s,`bee-${i}`));
+    const loaded=restore(serialize(s));
+    loaded.bees=loaded.bees.slice(0,1);
+    Object.assign(loaded.player, PLACES.find(p=>p.id==='yellow-cannon')!);
+    expect(interactPlace(loaded,'yellow-cannon')).toBe(true);
+    for(let i=0;i<40;i++)movePlayer(loaded,0,0,.1);
+    expect(loaded.player.x).toBe(0);
+    expect(loaded.player.z).toBe(0);
+    Object.assign(loaded.player, PLACES.find(p=>p.id==='blue-cannon')!);
+    expect(interactPlace(loaded,'blue-cannon')).toBe(false);
+    loaded.cooldowns.cannon=0;
+    expect(interactPlace(loaded,'blue-cannon')).toBe(true);
+    expect(loaded.flight?.to.x).toBe(FIELDS.find(f=>f.id==='clover')!.x);
+  });
   it("launches only an eligible nearby swarm and lands on the mountaintop safely", () => {
     const s = createGame();
     Object.assign(s.player, PLACES.find((p) => p.id === "red-cannon")!);
     const before = s.player.y;
     expect(interactPlace(s, "red-cannon")).toBe(false);
-    while (s.bees.length < 25) s.bees.push(newBee(s, "bee-0"));
+    while (s.bees.length < 25) s.bees.push(newBee(s, `bee-${s.bees.length}`));
     expect(interactPlace(s, "red-cannon")).toBe(true);
     movePlayer(s, 1, 1, 0.1);
     expect(s.player.y).toBeGreaterThan(before);

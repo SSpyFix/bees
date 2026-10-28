@@ -44,6 +44,16 @@ export function ImportedLandmarks() {
     <Box position={[162, 22.65, -164]} scale={[22, 0.55, 8]} color="#9b7748" />
     {FIELDS.map((f) => <Label plain key={f.id} text={f.name} position={[f.x, f.y + 3.5, f.z - (f.depth ?? f.width) / 2]} width={Math.min(12, f.width)} size={0.8} />)}
     {PLACES.map((p) => <group key={p.id} position={[p.x, p.y, p.z]}>
+      {(p.id === "yellow-cannon" || p.id === "blue-cannon") && <group>
+        <Box position={[0, .25, 0]} scale={[3, .5, 3]} color="#555555" />
+        <mesh position={[0, 1.5, 0]} rotation={[Math.PI / 4, 0, 0]}>
+          <cylinderGeometry args={[.7, .9, 3, 16]} />
+          <meshStandardMaterial color={p.accent} />
+        </mesh>
+        <mesh position={[0, 2.57, -1.07]} rotation={[Math.PI / 4, 0, 0]}>
+          <circleGeometry args={[.6, 16]} /><meshStandardMaterial color="#171717" side={THREE.DoubleSide} />
+        </mesh>
+      </group>}
       {rebuilt.has(p.id) && (p.kind === "npc" ? <Bear color="#997652" /> : <>
         <Box position={[0, 0.45, 0]} scale={[3.2, 0.9, 2.2]} color={p.accent} />
         <Box position={[0, 1.7, 0]} scale={[2.6, 1.6, 1.6]} color="#eee8d5" />

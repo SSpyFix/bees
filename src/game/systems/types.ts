@@ -114,6 +114,7 @@ export type Game = {
     pulse: number;
   })[];
   bees: Bee[];
+  discoveredBees: string[];
   player: Vec & {
     yaw: number;
     vy: number;
