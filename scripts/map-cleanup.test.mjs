@@ -1,6 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanImportedPart } from './map-cleanup.mjs';
+import { cleanImportedPart, legacyPerimeterWall } from './map-cleanup.mjs';
+
+test('removes short invisible Clover perimeter walls without removing visible terrain', () => {
+  const markers = [{ name: 'Clover Field', position: [102.915, 10.95, -27.137], size: [53.2, 1, 40.6] }];
+  const wall = { opacity: 0, position: [76.4025, 13.834, -26.175], size: [.175, 8.068, 41.65], rotation: [1,0,0,0,1,0,0,0,1] };
+  assert.equal(legacyPerimeterWall(wall, markers), true);
+  assert.equal(legacyPerimeterWall({ ...wall, opacity: 1 }, markers), false);
+  assert.equal(legacyPerimeterWall({ ...wall, size: [4, 8, 42] }, markers), false);
+  assert.equal(legacyPerimeterWall({ ...wall, position: [200, 14, -26] }, markers), false);
+  assert.equal(legacyPerimeterWall(wall, [{ ...markers[0], name: 'Spider Field' }]), false);
+});
 
 test('excludes exported stray bees together with their wings and accessories', () => {
   for (const path of ['Model/Model/Bee269', 'Model/Model/Bee147/Wings', 'Model/Model/Bee153/Ear'])

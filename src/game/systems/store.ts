@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { createGame, restore, serialize, notify } from "./simulation";
+import { createGame, restore, serialize, notify, resetCharacter } from "./simulation";
 import type { Game } from "./types";
 export const SAVE_KEY = "pollen-peak-save-v2";
 function load() {
@@ -35,6 +35,7 @@ export const useGame = create<{
   open: (menu: Menu, place?: string) => void;
   save: () => void;
   reset: () => void;
+  resetCharacter: () => void;
 }>((set, get) => ({
   game: load(),
   revision: 0,
@@ -64,6 +65,11 @@ export const useGame = create<{
       set({ saveStatus: "Save failed — browser storage is unavailable" });
       notify(get().game, "Could not save. Check browser storage permissions.");
     }
+  },
+  resetCharacter: () => {
+    resetCharacter(get().game);
+    set((state) => ({ menu: null, shopContext: null, placeId: "", revision: state.revision + 1 }));
+    get().save();
   },
   reset: () => {
     try {

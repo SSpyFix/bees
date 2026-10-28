@@ -502,6 +502,7 @@ function Settings() {
   const s = useGame((g) => g.game),
     save = useGame((g) => g.save),
     reset = useGame((g) => g.reset),
+    resetCharacter = useGame((g) => g.resetCharacter),
     status = useGame((g) => g.saveStatus);
   useGame((g) => g.revision);
   const [confirm, setConfirm] = useState(false);
@@ -567,6 +568,15 @@ function Settings() {
         </label>
       </div>
       <AutoJelly settings />
+      <div className="settings-save">
+        <div>
+          <h3>Stuck? Return to spawn.</h3>
+          <p>Keep your bees, honey, pollen, items, and quest progress.</p>
+        </div>
+        <button className="button secondary" onClick={resetCharacter}>
+          Reset character to spawn
+        </button>
+      </div>
       <div className="settings-save">
         <div>
           <h3>Your mountain, remembered.</h3>

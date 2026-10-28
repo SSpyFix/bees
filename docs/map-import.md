@@ -9,6 +9,7 @@ The converted source contains 17,076 parts. The playable map has 17 fields and 1
 - The export has no identifiable Stump field. A connected stump and flower patch were rebuilt beside Pineapple to preserve existing field quests.
 - Coconut and Pepper lacked a usable connection to the old main map. Three visible trail segments connect them, requiring 35 bees.
 - One invisible old perimeter wall crossed Coconut Field. It is excluded from collision.
+- Three short invisible perimeter walls around Clover Field are also excluded from collision, leaving its edges open.
 - An uncut source wall blocked the five-bee doorway. Conversion opens the doorway in both visible and collision geometry; progression still controls the gate.
 - Activities without a source interaction marker use rebuilt stands on clear ground. Other interactions use measured landmarks, with clear nearby approach positions.
 - Old saves retain progression and restart at the new spawn. Saves on this map retain their valid position and elevation. Old sixth-hive selections migrate to an existing hive.

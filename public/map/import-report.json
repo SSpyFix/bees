@@ -99,7 +99,7 @@
   "sourceParts": 17076,
   "convertedParts": 16981,
   "flowers": 12510,
-  "collisionTriangles": 81762,
+  "collisionTriangles": 81726,
   "drawBatches": 284,
   "removedLegacyWalls": [
     {
@@ -239,6 +239,59 @@
     {
       "asset": "3494219404",
       "reason": "Asset unavailable"
+    }
+  ],
+  "removedCloverPerimeterWalls": [
+    {
+      "bounds": [
+        [
+          76.315,
+          76.49
+        ],
+        [
+          9.8,
+          17.868
+        ],
+        [
+          -47,
+          -5.35
+        ]
+      ],
+      "collisionTriangles": 12
+    },
+    {
+      "bounds": [
+        [
+          129.34,
+          129.515
+        ],
+        [
+          8.912,
+          19.286
+        ],
+        [
+          -47.35,
+          -5.35
+        ]
+      ],
+      "collisionTriangles": 12
+    },
+    {
+      "bounds": [
+        [
+          76.053,
+          129.603
+        ],
+        [
+          9.8,
+          18.858
+        ],
+        [
+          -47.262,
+          -47.087
+        ]
+      ],
+      "collisionTriangles": 12
     }
   ]
 }

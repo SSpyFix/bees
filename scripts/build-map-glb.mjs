@@ -4,7 +4,7 @@ import path from 'node:path';
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createDecalGeometry, createGateWallGeometry } from './map-geometry.mjs';
-import { cleanImportedPart } from './map-cleanup.mjs';
+import { cleanImportedPart, legacyPerimeterWall } from './map-cleanup.mjs';
 
 const root = process.cwd();
 const source = JSON.parse(fs.readFileSync('.local/source-map.json', 'utf8'));
@@ -150,11 +150,6 @@ function geometry(p) {
 const buckets = new Map(), collision = [], flowers = [], removedLegacyWalls=[],openedGateWalls=[];
 const excludedBeeParts=[],excludedBeeModels=new Set();let clearedHivePortraits=0;
 const gateDoors=source.parts.filter(p=>p.name==='Door'&&/\d+ Bee Gate\//.test(p.path));
-function legacyPerimeterWall(p) {
-  if(p.opacity>0.001 || p.size[1]<30 || Math.min(p.size[0],p.size[2])>0.3) return false;
-  const r=p.rotation,extent=[0,1,2].map(a=>p.size.reduce((n,v,b)=>n+Math.abs(r[a*3+b])*v/2,0));
-  return source.markers.some(f=>f.name!=='SpawnLocation' && [0,1,2].every(a=>Math.abs(p.position[a]-f.position[a])<extent[a]+f.size[a]/2));
-}
 function add(g, color, texture, opacity=1, cell='') {
   if (opacity < 0.01) { g.dispose(); return; }
   if (g.index) { const old = g; g = g.toNonIndexed(); old.dispose(); }
@@ -188,7 +183,7 @@ for (const original of source.parts) {
   const gateWall=p.class==='Part'&&p.collide&&!p.special ? createGateWallGeometry(p,gateDoors) : null;
   if(gateWall)openedGateWalls.push({name:p.path,position:p.position});
   const g=flower ? new T.PlaneGeometry(p.size[0],p.size[2]).rotateX(-Math.PI/2).translate(p.position[0],p.position[1]+p.size[1]/2,p.position[2]) : gateWall || geometry(p);
-  const obsolete=legacyPerimeterWall(p);
+  const obsolete=legacyPerimeterWall(p, source.markers);
   if(obsolete) removedLegacyWalls.push({name:p.path,position:p.position});
   if(p.collide && !flower && p.class!=='SpawnLocation' && !obsolete) addCollision(g);
   const cell=`${Math.floor(p.position[0]/40)},${Math.floor(p.position[2]/40)}`;

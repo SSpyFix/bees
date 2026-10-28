@@ -42,6 +42,24 @@ test("gathers on the imported Dandelion field and saves the new map position", a
   expect(saved.position.x).toBeCloseTo(f.x, 1);
 });
 
+test("Settings resets only the character to spawn and saves the result", async ({ page }) => {
+  const field = map.fields.find((f) => f.id === "clover")!;
+  await openMap(page, { honey: 1234, pollen: 80, position: { x: field.x, y: field.y, z: field.z } });
+  await page.getByRole("button", { name: "Open settings", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Reset character to spawn", exact: true })).toBeVisible();
+  const before = await page.evaluate(async () => {
+    const { useGame } = await import("/src/game/systems/store.ts");
+    const { serialize } = await import("/src/game/systems/simulation.ts");
+    return JSON.parse(serialize(useGame.getState().game));
+  });
+  await page.getByRole("button", { name: "Reset character to spawn", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Settings", exact: true })).not.toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("pollen-peak-save-v2")!));
+  expect(saved.position).toEqual(map.spawn);
+  for (const key of ["honey", "pollen", "bees", "inventory", "quests", "owned", "hive"])
+    expect(saved[key], key).toEqual(before[key]);
+});
+
 test("converts pollen at an exported hive and opens a relocated quest giver", async ({ page }) => {
   const hive = map.hives[2];
   await openMap(page, { hive: 2, pollen: 100, position: hive });

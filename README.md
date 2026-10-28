@@ -23,6 +23,8 @@ Start with one Basic Bee, a Scooper, a 200-pollen Pouch, an extra egg, five trea
 
 The game saves to this browser after transactions, every 15 seconds, and when the page is hidden. Settings includes manual save and a confirmed reset. Storage is local to the browser and origin; private browsing or clearing site data can erase progress. Settings also offers volume, mute, camera sensitivity and lighter graphics.
 
+If you get stuck, open Settings and click **Reset character to spawn**. This returns your character to the starting area and keeps your bees, honey, pollen, inventory, and quests.
+
 ## Implemented systems
 
 - 17 flower fields with 12,206 individually depleted and regenerating flower tiles at measured map locations; imported terrain and rebuilt upper-area trails.

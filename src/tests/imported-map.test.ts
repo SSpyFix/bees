@@ -22,6 +22,14 @@ describe("imported collision geometry", () => {
 });
 
 describe("playable imported map", () => {
+  it("leaves Clover Field's invisible perimeter open", () => {
+    const field = FIELDS.find((f) => f.id === "clover")!;
+    for (const [x, z] of [[76.4, field.z], [129.43, field.z], [field.x, -47.17]]) {
+      expect(solidAt(x, z, field.y), `Clover boundary at ${x}, ${z}`).toBe(false);
+      expect(lockedAt(x, z, 1, field.y)).toBe(0);
+    }
+    expect(surface(field.x, field.z, field.y)).toBeCloseTo(field.y, 1);
+  });
   it("places flowers inside all seventeen live fields", () => {
     const game = createGame();
     expect(game.flowers).toHaveLength(map.flowers.length);

@@ -491,6 +491,16 @@ function moveOnTerrain(s: Game, x: number, z: number) {
     if (p.grounded && h > p.y && h <= p.y + 0.8) p.y = h;
   }
 }
+export function resetCharacter(s: Game) {
+  Object.assign(s.player, importedMap.spawn, {
+    yaw: Math.PI, vy: 0, hp: 100, invulnerable: 3,
+    moving: false, grounded: true, swing: 0,
+  });
+  s.flight = null;
+  s.converting = false;
+  notify(s, "Character reset to spawn.");
+}
+
 export function movePlayer(
   s: Game,
   dx: number,

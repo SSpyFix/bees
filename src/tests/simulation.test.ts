@@ -20,6 +20,7 @@ import {
   releaseBee,
   questReady,
   home,
+  resetCharacter,
 } from "../game/systems/simulation";
 import map from "../game/data/imported-map.json";
 import { surface } from "../game/world/terrain";
@@ -33,6 +34,33 @@ const inField = () => {
   s.player.y = f.y;
   return s;
 };
+describe("character reset", () => {
+  it("returns a stuck or flying character to spawn without clearing progress", () => {
+    const s = inField();
+    s.honey = 1234;
+    s.pollen = 100;
+    s.player.hp = 25;
+    s.player.vy = -20;
+    s.player.grounded = false;
+    s.player.moving = true;
+    s.player.swing = 1;
+    s.flight = { from: { x: 10, y: 0, z: 10 }, to: { x: 50, y: 30, z: 50 }, elapsed: .5, duration: 2 };
+    s.converting = true;
+    const progress = JSON.parse(serialize(s));
+
+    resetCharacter(s);
+
+    expect(s.player).toMatchObject({ ...map.spawn, vy: 0, grounded: true, moving: false, swing: 0, hp: 100 });
+    expect(s.flight).toBeNull();
+    expect(s.converting).toBe(false);
+    const saved = JSON.parse(serialize(s));
+    for (const key of ["honey", "pollen", "bees", "inventory", "quests", "owned", "hive"])
+      expect(saved[key], key).toEqual(progress[key]);
+    movePlayer(s, 0, 0, .1);
+    expect(s.player.x).toBe(map.spawn.x);
+    expect(s.player.z).toBe(map.spawn.z);
+  });
+});
 describe("spatial gathering and conversion", () => {
   it("collects only actual nearby flowers and respects capacity", () => {
     const s = inField();
