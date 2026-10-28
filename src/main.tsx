@@ -1,3 +1,4 @@
+import { openFifteenBeeGateCollision } from "./game/world/gate-opening";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { installTerrain } from "./game/world/imported-terrain";
@@ -9,7 +10,7 @@ async function start() {
   try {
     const response = await fetch(`${import.meta.env.BASE_URL}map/collision.bin`);
     if (!response.ok) throw new Error("The map could not be loaded. Please reload.");
-    installTerrain(new Float32Array(await response.arrayBuffer()));
+    installTerrain(openFifteenBeeGateCollision(new Float32Array(await response.arrayBuffer())));
     // Restore saves only after the new collision geometry is available.
     const { default: App } = await import("./App");
     ReactDOM.createRoot(host).render(<React.StrictMode><App /></React.StrictMode>);

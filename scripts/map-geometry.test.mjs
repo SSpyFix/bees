@@ -28,3 +28,14 @@ test('top and right decals respect part dimensions and world rotation',()=>{
   assert.ok(g.attributes.normal.getZ(0)<-0.99);
   g.dispose();
 });
+
+test('opens thick terrain walls at a gate while preserving the sides',()=>{
+ const wall={size:[82.477,40.173,2.712],position:[-43.1895,19.7365,-119.381],rotation:[1,0,0,0,1,0,0,0,1]};
+ const door={position:[-44.24655,26.34881,-118.92618],size:[14.25455,10,.4]};
+ const g=createGateWallGeometry(wall,[door]);assert.ok(g);
+ const mesh=new T.Mesh(g,new T.MeshBasicMaterial({side:T.DoubleSide}));
+ const ray=new T.Raycaster(new T.Vector3(-44.24655,24,-113),new T.Vector3(0,0,-1));
+ assert.equal(ray.intersectObject(mesh).length,0);
+ ray.ray.origin.x=-60;assert.ok(ray.intersectObject(mesh).length>0);
+ g.dispose();mesh.material.dispose();
+});

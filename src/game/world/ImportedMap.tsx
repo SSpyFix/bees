@@ -6,12 +6,15 @@ import { FIELDS, HIVE_PADS, PLACES } from "../data/content";
 import { useGame } from "../systems/store";
 import { Box, Bear, Label } from "./models";
 import LiveHiveBees from "./LiveHiveBees";
+import { openFifteenBeeGate } from './gate-opening';
 
 export default memo(function ImportedMap() {
   const { scene } = useGLTF(`${import.meta.env.BASE_URL}map/bss-map.glb`);
   useEffect(() => {
     scene.traverse((object) => {
       if (object instanceof THREE.Mesh) {
+        const opened=openFifteenBeeGate(object.geometry);
+        if(opened!==object.geometry){object.geometry.dispose();object.geometry=opened;}
         object.receiveShadow = true;
         // The imported map is large; dynamic actors provide the moving shadows.
         object.castShadow = false;

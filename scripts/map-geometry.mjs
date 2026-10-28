@@ -17,7 +17,7 @@ export function createDecalGeometry(p,d) {
 
 export function createGateWallGeometry(p, doors) {
   const r=p.rotation, extent=[0,1,2].map(a=>p.size.reduce((n,v,b)=>n+Math.abs(r[a*3+b])*v/2,0));
-  if(extent[0]<10 || extent[2]>.4 || extent[1]<1.5 || r.some(v=>Math.min(Math.abs(v),Math.abs(Math.abs(v)-1))>.001)) return null;
+  if(extent[0]<10 || extent[2]>5 || extent[1]<1.5 || r.some(v=>Math.min(Math.abs(v),Math.abs(Math.abs(v)-1))>.001)) return null;
   const lo=p.position.map((v,a)=>v-extent[a]),hi=p.position.map((v,a)=>v+extent[a]);
   const openings=doors.filter(d=>Math.abs(d.position[2]-p.position[2])<5 && Math.abs(d.position[0]-p.position[0])<extent[0]+d.size[0]/2 && Math.abs(d.position[1]-p.position[1])<extent[1]+d.size[1]/2);
   if(!openings.length)return null;

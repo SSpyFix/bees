@@ -72,13 +72,16 @@ describe("playable imported map", () => {
     expect(HIVE_PADS[restore(JSON.stringify(raw)).hive]).toBeDefined();
   });
   it("walks each rebuilt trail to the added upper map areas", () => {
-    for(const r of map.routes) {
-      const s=createGame();while(s.bees.length<50)s.bees.push({...s.bees[0],id:`test-${s.bees.length}`});
+    for(const r of map.routes.flatMap(r=>[r,{...r,name:`${r.name} return`,from:r.to,to:r.from}])) for(const count of [r.gate-1,r.gate,r.gate+1]) {
+      const s=createGame();while(s.bees.length<count)s.bees.push({...s.bees[0],id:`test-${s.bees.length}`});
       Object.assign(s.player,{x:r.from[0],y:r.from[1],z:r.from[2]});
       const dx=r.to[0]-r.from[0],dz=r.to[2]-r.from[2],length=Math.hypot(dx,dz);
       for(let i=0;i<Math.floor(length/.8);i++) movePlayer(s,dx,dz,.1);
-      expect(Math.hypot(s.player.x-r.to[0],s.player.z-r.to[2]),`${r.name}: ${s.player.x},${s.player.y},${s.player.z}`).toBeLessThan(1.5);
-      expect(s.player.y,r.name).toBeGreaterThan(r.to[1]-1.5);
+      if(count<r.gate) expect(Math.hypot(s.player.x-r.from[0],s.player.z-r.from[2]),r.name).toBeLessThan(.1);
+      else {
+        expect(Math.hypot(s.player.x-r.to[0],s.player.z-r.to[2]),`${r.name}: ${s.player.x},${s.player.y},${s.player.z}`).toBeLessThan(1.5);
+        expect(s.player.y,r.name).toBeGreaterThan(r.to[1]-1.5);
+      }
     }
   });
   it("walks across the source gate approach with five bees", () => {
@@ -88,5 +91,15 @@ describe("playable imported map", () => {
     const loaded=restore(JSON.stringify(saved));
     for(let i=0;i<120;i++) movePlayer(loaded,0,-1,1/30);
     expect(loaded.player.z,JSON.stringify(loaded.player)).toBeLessThan(g.z-3);
+  });
+  for(const g of map.gates) it(`opens the ${g.bees}-bee doorway for eligible swarms and blocks ineligible swarms`,()=>{
+    for(const count of [g.bees-1,g.bees,g.bees+1]) for(const direction of [-1,1]) for(const offset of [-2,0,2]) {
+      const s=createGame();while(s.bees.length<count)s.bees.push({...s.bees[0],id:`gate-${s.bees.length}`});
+      Object.assign(s.player,{x:g.x+offset,y:g.y-5,z:g.z-direction*4});
+      for(let i=0;i<120;i++)movePlayer(s,0,direction,1/30);
+      const progress=(s.player.z-g.z)*direction;
+      if(count<g.bees)expect(progress).toBeLessThan(0);
+      else expect(progress,`${count} bees, direction ${direction}, offset ${offset}: ${JSON.stringify(s.player)}`).toBeGreaterThan(3);
+    }
   });
 });

@@ -10,7 +10,7 @@ The converted source contains 17,076 parts. The playable map has 17 fields and 1
 - Coconut and Pepper lacked a usable connection to the old main map. Three visible trail segments connect them, requiring 35 bees.
 - One invisible old perimeter wall crossed Coconut Field. It is excluded from collision.
 - Three short invisible perimeter walls around Clover Field are also excluded from collision, leaving its edges open.
-- An uncut source wall blocked the five-bee doorway. Conversion opens the doorway in both visible and collision geometry; progression still controls the gate.
+- Uncut source walls blocked the five- and fifteen-bee doorways. Conversion supports thick gate walls; a load-time cut also opens the existing fifteen-bee wall in both visible and collision geometry. The surrounding walls remain solid, and progression still controls each gate.
 - Activities without a source interaction marker use rebuilt stands on clear ground. Other interactions use measured landmarks, with clear nearby approach positions.
 - Old saves retain progression and restart at the new spawn. Saves on this map retain their valid position and elevation. Old sixth-hive selections migrate to an existing hive.
 - Exported `Bee<number>` rigs and their wings/accessories are removed (42 stray bees, 95 parts). The 42 prefilled hive portraits are cleared. The claimed hive board draws portraits from the actual saved swarm; other hive boards remain empty. Boards extend beyond the source's 40 cells when needed to display all 50 supported bees. Gate statues are retained.

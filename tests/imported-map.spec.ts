@@ -251,3 +251,13 @@ test('all bees work concurrently on separate flowers and show collection feedbac
  expect(result.floaters).toBeGreaterThan(5);
  await page.screenshot({path:'test-results/concurrent-bee-gathering.png'});
 });
+
+for(const gate of map.gates) test(`walks through the actual ${gate.bees}-bee doorway at its requirement`,async({page})=>{
+ test.setTimeout(120000);
+ const g=gate;
+ await openMap(page,{bees:Array.from({length:g.bees},()=>({kind:'bee-0',level:1})),position:{x:g.x,y:g.y-5,z:g.z+4}});
+ await page.keyboard.down('w');
+ await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z),{timeout:60000}).toBeLessThan(g.z-3);
+ await page.keyboard.up('w');
+ await page.screenshot({path:`test-results/${g.bees}-bee-gate-open.png`});
+});
