@@ -30,6 +30,10 @@ export const useGame = create<{
   placeId: string;
   shopContext: { menu: "shop" | "eggs"; placeId: string } | null;
   leaveShop: () => void;
+  adminUnlocked: boolean;
+  adminOpen: boolean;
+  unlockAdmin: (code: string) => boolean;
+  setAdminOpen: (open: boolean) => void;
   saveStatus: string;
   refresh: () => void;
   open: (menu: Menu, place?: string) => void;
@@ -43,6 +47,14 @@ export const useGame = create<{
   placeId: "",
   shopContext: null,
   leaveShop: () => set({ menu: null, shopContext: null, placeId: "" }),
+  adminUnlocked: false,
+  adminOpen: false,
+  unlockAdmin: (code) => {
+    if (code !== '4321') return false;
+    set({ adminUnlocked: true, adminOpen: true, menu: null, shopContext: null, placeId: '' });
+    return true;
+  },
+  setAdminOpen: (open) => { if(get().adminUnlocked) set({adminOpen: open}); },
   saveStatus: "",
   refresh: () => set((x) => ({ revision: x.revision + 1 })),
   open: (menu, placeId = "") => {

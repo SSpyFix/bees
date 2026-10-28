@@ -506,10 +506,12 @@ function Settings() {
     status = useGame((g) => g.saveStatus);
   useGame((g) => g.revision);
   const [confirm, setConfirm] = useState(false);
+  const [adminCode, setAdminCode] = useState("");
+  const [adminError, setAdminError] = useState("");
   return (
     <>
       <p className="menu-intro">
-        A quiet moment on the mountain. Your adventure is paused.
+        Adjust your adventure. You can keep moving while menus are open.
       </p>
       <div className="settings-grid">
         <label>
@@ -567,6 +569,14 @@ function Settings() {
           </select>
         </label>
       </div>
+      <form className="settings-save" onSubmit={(e) => {
+        e.preventDefault();
+        if (!useGame.getState().unlockAdmin(adminCode)) setAdminError('Incorrect admin code.');
+      }}>
+        <label>Admin code <input aria-label="Admin code" type="password" inputMode="numeric" autoComplete="off" value={adminCode} onChange={e=>{setAdminCode(e.target.value);setAdminError('');}} /></label>
+        <button className="button" type="submit">Open admin menu</button>
+        {adminError && <p role="alert">{adminError}</p>}
+      </form>
       <AutoJelly settings />
       <div className="settings-save">
         <div>

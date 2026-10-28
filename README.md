@@ -75,3 +75,9 @@ Pushes to `main` trigger the connected Vercel production deployment. A deploymen
 Approach a cannon and press **E** (or click its interaction button). Red launches to Mountain Top and requires 25 discovered bee types plus 25 bees for the destination gate. Yellow returns to spawn after discovering 12 types; Blue launches to Clover after discovering 16 types. Discoveries persist across transformations and reloads. The cannons share a five-second cooldown. Old saves start their discovery record from their current swarm.
 
 Yellow and Blue have rebuilt launchers near Science Bear and the Pine/Rose approach in this converted map. Their routes use the browser game's controlled flight arc; steering/gliders and exact Roblox launch physics are not implemented.
+
+## Admin tools and menus
+
+In Settings, enter `4321` under **Admin code**. The top-right admin panel has independent 10× pollen and honey toggles, an egg selector with a Gifted option, and **+999 crafting materials**. Granted eggs go to Inventory and use the normal hatch action; gifted eggs guarantee gifted status. Inventory and boost choices save locally. Enter the code again after reloading to reopen the controls.
+
+WASD/arrows and jumping work while menus are open, including Settings. Typing in a text field or using a selector keeps those keystrokes out of character movement.

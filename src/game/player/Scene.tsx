@@ -51,10 +51,12 @@ function Controller() {
       inp.rotate = false;
       inp.jumpQueued = false;
     };
+    const focusInput = (e: FocusEvent) => { if ((e.target as HTMLElement)?.matches("input:not([type=checkbox]), select, textarea, [contenteditable=true]")) clear(); };
     const keydown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && (e.target as HTMLElement)?.matches("input[type=checkbox]")) return;
       if (
         e.code !== "Escape" &&
-        (e.target as HTMLElement)?.matches("input, select, textarea")
+        (e.target as HTMLElement)?.matches("input:not([type=checkbox]), select, textarea, [contenteditable=true]")
       )
         return;
       if (
@@ -110,6 +112,12 @@ function Controller() {
         state.leaveShop();
         state.save();
         clear();
+        return;
+      }
+      if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
+        e.preventDefault();
+        inp.keys.add(e.code);
+        if(e.code === 'Space') inp.jumpQueued = true;
         return;
       }
       if (state.menu) return;
@@ -192,6 +200,7 @@ function Controller() {
     window.addEventListener("keydown", keydown);
     window.addEventListener("keyup", keyup);
     window.addEventListener("blur", clear);
+    document.addEventListener("focusin", focusInput);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointermove", pointer);
     gl.domElement.addEventListener("pointerdown", down);
@@ -203,6 +212,7 @@ function Controller() {
       window.removeEventListener("keydown", keydown);
       window.removeEventListener("keyup", keyup);
       window.removeEventListener("blur", clear);
+      document.removeEventListener("focusin", focusInput);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointermove", pointer);
       gl.domElement.removeEventListener("pointerdown", down);
@@ -215,14 +225,14 @@ function Controller() {
     const state = useGame.getState(),
       i = input.current;
     const dt = Math.min(frameDt, 0.25);
-    const paused = state.menu === "settings";
-    if (state.menu || useItemDrag.getState().pending || useItemDrag.getState().item) {
+    if (state.menu) i.gather = false;
+    if (useItemDrag.getState().pending || useItemDrag.getState().item) {
       i.keys.clear();
       i.gather = false;
       i.jumpQueued = false;
     }
     updateAutoJelly(game,10000);
-    if (!paused) {
+    {
       i.tick += dt;
       let ticks = 0;
       while (i.tick >= 1 / 30 && ticks++ < 8) {

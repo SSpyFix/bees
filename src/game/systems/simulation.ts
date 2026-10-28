@@ -85,6 +85,7 @@ export function createGame(): Game {
     version: 2,
     hive: 3,
     honey: 0,
+    adminBoosts: { pollen: false, honey: false },
     pollen: 0,
     capacity: 200,
     tool: "tool-0",
@@ -132,6 +133,7 @@ export function createGame(): Game {
       goldEgg: 0,
       diamondEgg: 0,
       mythicEgg: 0,
+      giftedEgg: 0, giftedSilverEgg: 0, giftedGoldEgg: 0, giftedDiamondEgg: 0, giftedMythicEgg: 0,
       starJelly: 0,
       starTreat: 0,
       sunflowerSeed: 0,
@@ -236,6 +238,7 @@ export function multiplier(s: Game, kind: string) {
 }
 export function awardHoney(s: Game, amount: number) {
   if (amount <= 0 || !Number.isFinite(amount)) return;
+  amount *= s.adminBoosts.honey ? 10 : 1;
   s.honey += amount;
   s.stats.honey += amount;
   // Repeated fractional conversion ticks must not leave 120 as 119.9999999999.
@@ -310,6 +313,7 @@ export function harvest(s: Game, f: Flower, amount: number, instantBonus = 0) {
       f.multiplier *
       hat *
       multiplier(s, "pollen") *
+      (s.adminBoosts.pollen ? 10 : 1) *
       multiplier(s, "baby-love") *
       multiplier(s, "bear-morph") *
       multiplier(s, "inspire") *
@@ -335,9 +339,7 @@ export function harvest(s: Game, f: Flower, amount: number, instantBonus = 0) {
   f.pollen -= value;
   const instant = value * instantRate;
   s.pollen += value - instant;
-  s.honey += instant * mods.honeyPerPollen;
-  s.stats.honey += instant * mods.honeyPerPollen;
-  if (instant) event(s, "earn", instant * mods.honeyPerPollen);
+  awardHoney(s, instant * mods.honeyPerPollen);
   s.stats.pollen += value;
   if (f.goo > 0) { awardHoney(s, value * (s.bees.some(b => b.gifted && b.kind === "bee-40") ? 0.1 : 0.05)); event(s, "goo", value); }
   const balloon = s.effects.find(e => e.kind === "balloon" && e.life > 0 && distance(e, f) < e.radius && Math.abs(e.y - f.y) < 4);
@@ -704,7 +706,7 @@ export function hatch(s: Game, egg: EggKind = "egg") {
   const def = choices[Math.floor(random(s) * choices.length)];
   s.inventory[egg]--;
   const bee = newBee(s, def.id);
-  bee.gifted = random(s) < 1 / 250;
+  bee.gifted = egg.startsWith("gifted") || random(s) < 1 / 250;
   s.bees.push(bee);
   s.stats.hatches++;
   event(s, "hatch", 1);
@@ -923,14 +925,13 @@ export function claimQuest(s: Game, id: string) {
   delete s.accepted[id];
   s.completed.push(id);
   event(s, "quest", 1);
-  s.honey += q.honey;
-  s.stats.honey += q.honey;
+  awardHoney(s, q.honey);
   s.inventory.egg += q.egg;
   s.inventory.treat += q.treat;
   s.inventory.ticket += q.tickets ?? 5 + q.gate;
   for (const [item, amount] of Object.entries(q.rewards ?? {}))
     s.inventory[item] = (s.inventory[item] ?? 0) + amount;
-  event(s, "earn", q.honey);
+
   notify(s, `Quest complete! +${q.honey} honey${q.egg ? " +1 egg" : ""}`);
   return true;
 }
@@ -992,11 +993,9 @@ export function useItem(s: Game, id: string) {
     if (!s.pollen) return false;
     s.inventory[id]--;
     const value = s.pollen;
-    s.honey += value;
-    s.stats.honey += value;
+    awardHoney(s, value);
     s.pollen = 0;
     event(s, "convert", value);
-    event(s, "earn", value);
     notify(s, "Micro-Converter turned your pollen into honey.");
     return true;
   }
@@ -1058,9 +1057,8 @@ export function interactPlace(s: Game, id: string) {
   }
   if (id === "daily") {
     s.inventory.ticket += 5;
-    s.honey += 150;
-    s.stats.honey += 150;
-    event(s, "earn", 150);
+    awardHoney(s, 150);
+
     s.cooldowns[id] = now + 86400;
     notify(s, "Daily harvest: +150 honey and 5 tickets!");
     return true;
@@ -1398,10 +1396,9 @@ export function step(s: Game, dt: number) {
   if (s.challenge) {
     s.challenge.remaining -= dt;
     if (s.challenge.gathered >= s.challenge.target) {
-      s.honey += 250;
-      s.stats.honey += 250;
+      awardHoney(s, 250);
       s.inventory.egg++;
-      event(s, "earn", 250);
+
       s.challenge = null;
       s.cooldowns.challenge = Date.now() / 1000 + 120;
       notify(s, "Sprint complete! +250 honey and a Basic Egg.");
@@ -1435,6 +1432,7 @@ export function serialize(s: Game) {
   return JSON.stringify({
     version: 2,
     mapVersion: importedMap.version,
+    adminBoosts: s.adminBoosts,
     position: { x: s.player.x, y: s.player.y, z: s.player.z },
     hive: s.hive,
     honey: s.honey,
@@ -1517,6 +1515,7 @@ export function restore(raw: string | null): Game {
       )
         s[key] = d[key];
     }
+    s.adminBoosts = { pollen: d.adminBoosts?.pollen === true, honey: d.adminBoosts?.honey === true };
     s.capacity = GEAR.find((b) => b.id === s.bag)?.capacity ?? 200;
     s.pollen = num(d.pollen, 0, s.capacity);
     if (Array.isArray(d.bees)) {

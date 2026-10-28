@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from "react";
 import { useGame } from "./game/systems/store";
 import Scene from "./game/player/Scene";
+import AdminPanel from "./components/AdminPanel";
 import HUD from "./components/HUD";
 import Menus from "./components/Menus";
 import ItemDropConfirmation from './components/ItemDropConfirmation';
@@ -38,6 +39,7 @@ export default function App() {
       </div>
       <div className="scene-vignette" />
       <HUD />
+      <AdminPanel />
       <Menus />
       <ItemDropConfirmation />
     </main>

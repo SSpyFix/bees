@@ -97,3 +97,53 @@ for (const id of ['red-cannon', 'yellow-cannon', 'blue-cannon']) {
     expect(position.z).toBeCloseTo(target.z,1);
   });
 }
+
+test('movement and jumping work with Settings and Inventory open, but typing does not move', async ({page}) => {
+  test.setTimeout(120000);
+  await openMap(page);
+  for(const menu of ['settings','inventory']) {
+    await page.evaluate(async menu => (await import('/src/game/systems/store.ts')).useGame.getState().open(menu),menu);
+    const before=await page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z);
+    await page.keyboard.down('w');
+    await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z),{timeout:45000}).toBeLessThan(before-.5);
+    await page.keyboard.up('w');
+    await expect(page.getByRole('dialog')).toBeVisible();
+    if(menu==='settings') {
+      await page.keyboard.press('Space');
+      await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.y),{timeout:45000}).toBeGreaterThan(.3);
+    }
+  }
+});
+
+test('admin code unlocks tools, grants a gifted egg and materials, and saves independent buffs', async ({page}) => {
+  test.setTimeout(120000);
+  await openMap(page);
+  await page.getByRole('button',{name:'Open settings',exact:true}).click();
+  const code=page.getByLabel('Admin code',{exact:true});
+  const before=await page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z);
+  await code.pressSequentially('wrong');
+  await page.getByRole('button',{name:'Open admin menu',exact:true}).click();
+  await expect(page.getByRole('alert')).toHaveText('Incorrect admin code.');
+  expect(await page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z)).toBe(before);
+  await code.fill('4321');
+  await page.getByRole('button',{name:'Open admin menu',exact:true}).click();
+  const panel=page.getByRole('complementary',{name:'Admin menu',exact:true});
+  await expect(panel).toBeVisible();
+  await panel.getByLabel('10× pollen',{exact:true}).check();
+  await panel.getByLabel('10× honey',{exact:true}).check();
+  await panel.getByLabel('10× honey',{exact:true}).uncheck();
+  await panel.getByLabel('Admin egg type').selectOption('mythicEgg');
+  await panel.getByLabel('Gifted',{exact:true}).check();
+  await panel.getByRole('button',{name:'Give selected egg',exact:true}).click();
+  await panel.getByRole('button',{name:'+999 crafting materials',exact:true}).click();
+  const startZ=await page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z);
+  await page.keyboard.down('w');
+  await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z),{timeout:45000}).toBeLessThan(startZ-.5);
+  await page.keyboard.up('w');
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
+  expect(saved.adminBoosts).toEqual({pollen:true,honey:false});
+  expect(saved.inventory.giftedMythicEgg).toBe(1);
+  expect(saved.inventory.turpentine).toBe(999);
+  await panel.getByRole('button',{name:'Hide',exact:true}).click();
+  await expect(panel.getByRole('button',{name:'Show',exact:true})).toBeVisible();
+});

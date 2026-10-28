@@ -89,6 +89,7 @@ export type WorldEffect = Vec & {
   duration: number;
 };
 export type Game = {
+  adminBoosts: { pollen: boolean; honey: boolean };
   version: 2;
   hive: number;
   honey: number;

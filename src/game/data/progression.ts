@@ -1,4 +1,4 @@
-export const EGGS = {
+const STANDARD_EGGS = {
   egg: {
     name: "Basic Egg",
     odds: [
@@ -33,6 +33,14 @@ export const EGGS = {
     ],
   },
   mythicEgg: { name: "Mythic Egg", odds: [["Mythic", 1]] },
+} as const;
+export const EGGS = {
+  ...STANDARD_EGGS,
+  giftedEgg: {...STANDARD_EGGS.egg, name: 'Gifted Basic Egg'},
+  giftedSilverEgg: {...STANDARD_EGGS.silverEgg, name: 'Gifted Silver Egg'},
+  giftedGoldEgg: {...STANDARD_EGGS.goldEgg, name: 'Gifted Gold Egg'},
+  giftedDiamondEgg: {...STANDARD_EGGS.diamondEgg, name: 'Gifted Diamond Egg'},
+  giftedMythicEgg: {...STANDARD_EGGS.mythicEgg, name: 'Gifted Mythic Egg'},
 } as const;
 export type EggKind = keyof typeof EGGS;
 export const BOND_REQUIREMENTS = [
