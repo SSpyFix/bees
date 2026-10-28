@@ -1,9 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { createGame, harvest, awardHoney, hatch, serialize, restore } from '../game/systems/simulation';
+import { createGame, harvest, collect, awardHoney, hatch, serialize, restore } from '../game/systems/simulation';
 import { BEES } from '../game/data/content';
 import { grantAdminEgg, grantCraftingMaterials } from '../game/systems/admin';
 
 describe('admin tools', () => {
+  it('gives ten times the pollen from real tiles without depleting them ten times faster',()=>{
+    const normal=createGame(),boosted=createGame();
+    for(const s of [normal,boosted]) {
+      s.capacity=100000;
+      Object.assign(s.player,s.flowers[0]);
+    }
+    boosted.adminBoosts.pollen=true;
+    expect(collect(boosted)).toBeCloseTo(collect(normal)*10);
+    expect(boosted.flowers.map(f=>f.pollen)).toEqual(normal.flowers.map(f=>f.pollen));
+  });
+  it('keeps boosted pollen within the remaining bag capacity',()=>{
+    const s=createGame();s.adminBoosts.pollen=true;s.pollen=s.capacity-3;
+    const before=s.flowers[0].pollen;
+    expect(harvest(s,s.flowers[0],100)).toBeCloseTo(3);
+    expect(s.pollen).toBe(s.capacity);
+    expect(before-s.flowers[0].pollen).toBeCloseTo(.3);
+  });
   it('independently toggles pollen and honey multipliers without compounding', () => {
     const normal=createGame(), boosted=createGame();
     for(const s of [normal,boosted]) { s.capacity=100000; s.flowers[0].pollen=10000; }

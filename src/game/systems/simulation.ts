@@ -288,6 +288,7 @@ export function beeAttack(s: Game, b: Bee) {
 }
 export function harvest(s: Game, f: Flower, amount: number, instantBonus = 0) {
   if ((FIELDS.find((field) => field.id === f.field)?.gate ?? Infinity) > s.bees.length) return 0;
+  const adminPollen = s.adminBoosts.pollen ? 10 : 1;
   const hat = GEAR.find((g) => g.id === s.hat)?.power ?? 1;
   const mods = hiveModifiers(s);
   const bag = GEAR.find((b) => b.id === s.bag);
@@ -308,13 +309,13 @@ export function harvest(s: Game, f: Flower, amount: number, instantBonus = 0) {
     instantRate >= 1
       ? Infinity
       : Math.max(0, s.capacity - s.pollen) / (1 - instantRate),
-    f.pollen,
+    f.pollen * adminPollen,
     amount *
       f.size *
       f.multiplier *
       hat *
       multiplier(s, "pollen") *
-      (s.adminBoosts.pollen ? 10 : 1) *
+      adminPollen *
       multiplier(s, "baby-love") *
       multiplier(s, "bear-morph") *
       multiplier(s, "inspire") *
@@ -337,7 +338,7 @@ export function harvest(s: Game, f: Flower, amount: number, instantBonus = 0) {
       criticalMultiplier(s),
   );
   if (value <= 0) return 0;
-  f.pollen -= value;
+  f.pollen = Math.max(0, f.pollen - value / adminPollen);
   const instant = value * instantRate;
   s.pollen += value - instant;
   awardHoney(s, instant * mods.honeyPerPollen);
