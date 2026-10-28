@@ -1161,6 +1161,7 @@ export function damageEnemy(s: Game, enemy: Enemy, amount: number) {
   notify(s, `${ENEMY_TYPES[enemy.type].name} defeated! Collect the honey.`);
 }
 function swarm(s: Game, dt: number) {
+  const claimed = new Set(s.bees.filter(b=>b.state==="flying" || b.state==="gathering").map(b=>b.target));
   const field = FIELDS.find(
     (f) =>
       Math.abs(s.player.x - f.x) < f.width / 2 + 3 &&
@@ -1228,9 +1229,13 @@ function swarm(s: Game, dt: number) {
       followBee(s,b,dt,speed,()=>random(s));
       return;
     }
+    if (b.state === "following" && b.timer > 0) {
+      followBee(s,b,dt,speed,()=>random(s));
+      return;
+    }
     if (
-      ["following", "returning", "attacking", "searching"].includes(b.state) &&
-      b.timer <= 0
+      b.state === "searching" ||
+      (["following", "returning", "attacking"].includes(b.state) && b.timer <= 0)
     ) {
       b.state = "searching";
       let best: Flower | undefined,
@@ -1239,10 +1244,11 @@ function swarm(s: Game, dt: number) {
         if (
           f.field === field.id &&
           f.pollen > 1 &&
+          !claimed.has(f.id) &&
           distance(f, s.player) < 13
         ) {
           const score =
-            distance(f, b) + (f.color === def.color ? -3 : 3) + random(s) * 4;
+            distance(f, b) + (f.color === def.color ? -3 : 3) + (1 - f.pollen / f.max) * 6 + random(s) * 4;
           if (score < bestScore) {
             bestScore = score;
             best = f;
@@ -1250,9 +1256,12 @@ function swarm(s: Game, dt: number) {
         }
       if (best) {
         b.target = best.id;
+        claimed.add(best.id);
         b.state = "flying";
       } else {
-        b.timer = 1;
+        b.state = "following";
+        b.target = -1;
+        b.timer = 0.5;
         return;
       }
     }
@@ -1267,7 +1276,7 @@ function swarm(s: Game, dt: number) {
       fly(b, target.x, target.y + 0.8, target.z, dt, speed)
     ) {
       b.state = "gathering";
-      b.timer = 0.45;
+      b.timer = Math.max(b.timer, 0.15);
     }
     if (b.state === "gathering" && b.timer <= 0) {
       const value = harvest(
@@ -1286,9 +1295,11 @@ function swarm(s: Game, dt: number) {
           (target.color === def.color ? 1.5 : 1),
       );
       b.energy -= 0.75;
-      b.state = "returning";
+      claimed.delete(b.target);
+      b.target = -1;
+      b.state = "searching";
       b.timer = def.interval;
-      if (value > 0 && index < 5)
+      if (value > 0)
         floating(s, b.x, b.y + 1, b.z, `+${Math.ceil(value)}`, "#d1eea3");
       gatherPassive(s, b);
       spawnBeeAbilities(s, b, "gather");

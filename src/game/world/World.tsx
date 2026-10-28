@@ -23,7 +23,8 @@ function BeeActor({ id }: { id: string }) {
     const actor=group.current;
     if (actor && b) {
       const oldX=actor.position.x, oldZ=actor.position.z;
-      target.current.set(b.x,b.y+Math.sin(game.clock*(4.2+b.phase%1.1)+b.phase)*.12,b.z);
+      const bob=b.state==="gathering" ? Math.sin(game.clock*11+b.phase)*.2-.1 : Math.sin(game.clock*(4.2+b.phase%1.1)+b.phase)*.12;
+      target.current.set(b.x,b.y+bob,b.z);
       if(!initialized.current || actor.position.distanceToSquared(target.current)>35*35) {
         actor.position.copy(target.current); initialized.current=true;
       } else actor.position.lerp(target.current,1-Math.exp(-dt*14));

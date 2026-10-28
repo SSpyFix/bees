@@ -225,3 +225,29 @@ test('bees wander independently near the player and follow when walking', async 
   await page.keyboard.up('w');
   expect(errors).toEqual([]);
 });
+
+test('all bees work concurrently on separate flowers and show collection feedback', async ({page})=>{
+ test.setTimeout(150000);await openMap(page);
+ await page.evaluate(async()=>{
+  const {useGame}=await import('/src/game/systems/store.ts');
+  const {newBee}=await import('/src/game/systems/simulation.ts');
+  const {FIELDS,BAGS}=await import('/src/game/data/content.ts');
+  const state=useGame.getState(),s=state.game;
+  Object.assign(s.player,FIELDS[0]);s.enemies=[];
+  s.bag=BAGS.at(-1)!.id;s.owned.push(s.bag);
+  while(s.bees.length<8)s.bees.push(newBee(s,'bee-0'));
+  for(const b of s.bees)Object.assign(b,{x:s.player.x,y:s.player.y+.8,z:s.player.z,timer:0,abilityTimer:Infinity});
+  state.refresh();
+ });
+ await expect.poll(()=>page.evaluate(async()=>{
+  const s=(await import('/src/game/systems/store.ts')).useGame.getState().game;
+  return s.bees.filter(b=>b.energy<20).length;
+ }),{timeout:90000}).toBe(8);
+ const result=await page.evaluate(async()=>{
+  const s=(await import('/src/game/systems/store.ts')).useGame.getState().game;
+  return {pollen:s.stats.pollen,floaters:s.floaters.filter(f=>f.color==='#d1eea3').length,targets:new Set(s.bees.filter(b=>b.target>=0).map(b=>b.target)).size};
+ });
+ expect(result.pollen).toBeGreaterThan(0);
+ expect(result.floaters).toBeGreaterThan(5);
+ await page.screenshot({path:'test-results/concurrent-bee-gathering.png'});
+});
