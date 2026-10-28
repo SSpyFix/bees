@@ -147,3 +147,52 @@ test('admin code unlocks tools, grants a gifted egg and materials, and saves ind
   await panel.getByRole('button',{name:'Hide',exact:true}).click();
   await expect(panel.getByRole('button',{name:'Show',exact:true})).toBeVisible();
 });
+
+test('gifted eggs work from Inventory and replace a selected bee in a full hive', async ({page}) => {
+  test.setTimeout(120000);
+  await openMap(page,{inventory:{giftedMythicEgg:1}});
+  const target=await page.evaluate(async()=>{
+    const state=(await import('/src/game/systems/store.ts')).useGame.getState();
+    state.game.slots=state.game.bees.length;
+    state.refresh();
+    return state.game.bees[0].id;
+  });
+  await page.getByRole('button',{name:'Show inventory',exact:true}).click();
+  const row=page.locator('[data-inventory-item="giftedMythicEgg"]');
+  await row.getByRole('button',{name:'Choose bee',exact:true}).click();
+  await page.getByLabel('Target bee').selectOption(target);
+  await expect(page.getByRole('dialog',{name:'Use item on bee'})).toContainText('This replaces its species.');
+  await page.getByRole('button',{name:'Cancel',exact:true}).click();
+  await page.getByRole('button',{name:'Show hive',exact:true}).click();
+  await page.getByLabel('Egg type',{exact:true}).selectOption('giftedMythicEgg');
+  await page.getByRole('button',{name:'Use egg on selected bee',exact:true}).click();
+  await page.getByRole('button',{name:'Use 1 Gifted Mythic Egg',exact:true}).click();
+  const result=await page.evaluate(async()=>{
+    const s=(await import('/src/game/systems/store.ts')).useGame.getState().game;
+    const {BEES}=await import('/src/game/data/content.ts');
+    return {id:s.bees[0].id,gifted:s.bees[0].gifted,rarity:BEES.find(b=>b.id===s.bees[0].kind)?.rarity,count:s.bees.length,eggs:s.inventory.giftedMythicEgg};
+  });
+  expect(result).toEqual({id:target,gifted:true,rarity:'Mythic',count:1,eggs:0});
+});
+
+test('collapsed admin menu can be dragged and stays visible when reopened', async ({page}) => {
+  test.setTimeout(120000);
+  await openMap(page);
+  await page.getByRole('button',{name:'Open settings',exact:true}).click();
+  await page.getByLabel('Admin code',{exact:true}).fill('4321');
+  await page.getByRole('button',{name:'Open admin menu',exact:true}).click();
+  const panel=page.getByRole('complementary',{name:'Admin menu',exact:true});
+  await panel.getByRole('button',{name:'Hide',exact:true}).click();
+  const before=(await panel.boundingBox())!;
+  const title=panel.getByText('Admin menu',{exact:true});
+  const handle=(await title.boundingBox())!;
+  await page.mouse.move(handle.x+20,handle.y+8);
+  await page.mouse.down();
+  await page.mouse.move(handle.x-300,handle.y+280,{steps:10});
+  await page.mouse.up();
+  await expect.poll(async()=> (await panel.boundingBox())!.x).toBeLessThan(before.x-100);
+  await panel.getByRole('button',{name:'Show',exact:true}).click();
+  const expanded=(await panel.boundingBox())!;
+  expect(expanded.x).toBeGreaterThanOrEqual(0);
+  expect(expanded.y+expanded.height).toBeLessThanOrEqual(800);
+});

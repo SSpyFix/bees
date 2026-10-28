@@ -1,8 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, restore, serialize } from '../game/systems/simulation';
-import { assignHotbar, applyBeeItem } from '../game/systems/item-actions';
+import { assignHotbar, applyBeeItem, BEE_ITEMS } from '../game/systems/item-actions';
+import { BEES } from '../game/data/content';
 
 describe('inventory shortcuts and bee items', () => {
+  it('uses one gifted Mythic egg on the selected bee even in a full hive', () => {
+    const game=createGame(); game.slots=game.bees.length;
+    game.inventory.giftedMythicEgg=2;
+    const target=game.bees[0]; target.level=5; target.bond=20;
+    expect(BEE_ITEMS.has('giftedMythicEgg')).toBe(true);
+    expect(applyBeeItem(game,'giftedMythicEgg','missing')).toBe(false);
+    expect(game.inventory.giftedMythicEgg).toBe(2);
+    expect(applyBeeItem(game,'giftedMythicEgg',target.id)).toBe(true);
+    expect(game.bees).toHaveLength(1);
+    expect(game.bees[0]).toMatchObject({id:target.id,level:5,bond:20,gifted:true});
+    expect(BEES.find(b=>b.id===game.bees[0].kind)?.rarity).toBe('Mythic');
+    expect(game.inventory.giftedMythicEgg).toBe(1);
+  });
   it('keeps the tool in slot 1 and persists assigned items', () => {
     const game = createGame();
     expect(assignHotbar(game, 0, 'jelly')).toBe(false);

@@ -1,3 +1,4 @@
+import { requestBeeItem } from '../game/systems/item-drag';
 import type { Menu } from "../game/systems/store";
 import AutoJelly from "./AutoJelly";
 import BeeAbilities from "./BeeAbilities";
@@ -165,6 +166,9 @@ function Hive() {
           onClick={() => action(() => hatch(s, egg))}
         >
           🥚 Hatch an egg
+        </button>
+        <button className="button small secondary" disabled={!(s.inventory[egg] > 0)} onClick={()=>requestBeeItem(egg,b.id)}>
+          Use egg on selected bee
         </button>
         <button
           className="button small secondary"

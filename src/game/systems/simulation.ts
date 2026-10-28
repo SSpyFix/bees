@@ -687,12 +687,14 @@ export function buySlot(s: Game) {
   notify(s, "A new hexagon. A new possibility.");
   return true;
 }
-export function hatch(s: Game, egg: EggKind = "egg") {
+export function hatch(s: Game, egg: EggKind = "egg", replaceBeeId?: string) {
+  const replacement = replaceBeeId ? s.bees.findIndex(b=>b.id===replaceBeeId) : -1;
+  if (replaceBeeId && replacement < 0) return false;
   if (!EGGS[egg] || (s.inventory[egg] ?? 0) < 1) {
     notify(s, "Visit the Basic Egg Shop to buy a Basic Egg.");
     return false;
   }
-  if (s.bees.length >= s.slots) {
+  if (replacement < 0 && s.bees.length >= s.slots) {
     notify(s, "Your hive is full. Buy another hive slot first.");
     return false;
   }
@@ -707,7 +709,11 @@ export function hatch(s: Game, egg: EggKind = "egg") {
   s.inventory[egg]--;
   const bee = newBee(s, def.id);
   bee.gifted = egg.startsWith("gifted") || random(s) < 1 / 250;
-  s.bees.push(bee);
+  if (replacement >= 0) {
+    const previous=s.bees[replacement];
+    Object.assign(bee,{id:previous.id,level:previous.level,bond:previous.bond});
+    s.bees[replacement]=bee;
+  } else s.bees.push(bee);
   s.stats.hatches++;
   event(s, "hatch", 1);
   for (const gate of [5, 10, 15, 25, 35])

@@ -30,11 +30,7 @@ export default function InventoryPanel() {
   void revision;
   const [tab, setTab] = useState("items");
   const core = [
-    "egg",
-    "silverEgg",
-    "goldEgg",
-    "diamondEgg",
-    "mythicEgg",
+    ...Object.keys(EGGS),
     "treat",
     "jelly",
     "starJelly",
@@ -123,7 +119,7 @@ export default function InventoryPanel() {
                   {ITEM_NAMES[id] ?? id}
                 </h3>
                 <p>
-                  {descriptions[id] ??
+                  {(id.startsWith("gifted") && id in EGGS ? "Guarantees a gifted bee. Choose a hive bee to replace, or hatch into an empty slot from Hive." : descriptions[id]) ??
                     (usable
                       ? "Use this item for a temporary field or hive benefit."
                       : "Crafting material. Collect more from fields, creatures and quests.")}
@@ -134,7 +130,6 @@ export default function InventoryPanel() {
                   disabled={
                     !s.inventory[id] ||
                     (id === "jelly" && !!s.jellyRun?.running) ||
-                    !!(id in EGGS && s.bees.length >= s.slots) ||
                     (id === "converter" && s.pollen === 0)
                   }
                   onClick={() => {
