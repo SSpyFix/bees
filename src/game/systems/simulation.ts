@@ -88,6 +88,7 @@ export function createGame(): Game {
     hive: 3,
     honey: 0,
     adminBoosts: { pollen: false, honey: false },
+    adminShopUnlocks: false,
     pollen: 0,
     capacity: 200,
     tool: "tool-0",
@@ -623,7 +624,7 @@ export function buy(s: Game, id: string, quantity = 1) {
       notify(s, "Convert some pollen before equipping a smaller pack.");
       return false;
     }
-    if (s.bees.length < item.gate) {
+    if (s.bees.length < item.gate && !(s.adminShopUnlocks && s.owned.includes(id))) {
       notify(s, `${item.gate} bees required.`);
       return false;
     }
@@ -1442,6 +1443,7 @@ export function serialize(s: Game) {
     version: 2,
     mapVersion: importedMap.version,
     adminBoosts: s.adminBoosts,
+    adminShopUnlocks: s.adminShopUnlocks,
     position: { x: s.player.x, y: s.player.y, z: s.player.z },
     hive: s.hive,
     honey: s.honey,
@@ -1524,6 +1526,7 @@ export function restore(raw: string | null): Game {
       )
         s[key] = d[key];
     }
+    s.adminShopUnlocks = d.adminShopUnlocks === true;
     s.adminBoosts = { pollen: d.adminBoosts?.pollen === true, honey: d.adminBoosts?.honey === true };
     s.capacity = GEAR.find((b) => b.id === s.bag)?.capacity ?? 200;
     s.pollen = num(d.pollen, 0, s.capacity);

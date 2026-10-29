@@ -93,3 +93,5 @@ Visual reference: [original-game field screenshots](https://thenerdstash.com/7-m
 Hives begin with 25 slots. At the Mountain Top Shop, select **Hive Slot** to buy one additional empty slot, up to 50. The first costs 3,000,000 honey, the second 7,750,000; later purchases use the published individual BSS prices. Buying capacity does not hatch a bee. Slot purchases require being at the shop with at least 25 bees. Existing purchased capacity is retained.
 
 Price reference: [BSS hive slot table, slots 26–50](https://mobilematters.gg/roblox/get-more-bee-slots-bee-swarm-simulator).
+
+The admin panel's **Unlock all shop items** button grants all equipment, 50 hive slots, the top sprinkler, and at least one of each shop consumable. It preserves your equipped gear; choose an unlocked item in its shop and select **Equip**. Admin-granted equipment can be equipped without bee-count, material or honey requirements. This ownership and permission save locally.

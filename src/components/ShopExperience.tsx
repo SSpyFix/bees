@@ -80,7 +80,7 @@ export default function ShopExperience({
   const equipped =
     !consumables && [s.tool, s.bag, s.boots, s.hat].includes(item.id);
   const owned = !consumables && s.owned.includes(item.id),
-    locked = s.bees.length < item.gate;
+    locked = s.bees.length < item.gate && !(s.adminShopUnlocks && owned);
   const total = consumables ? purchaseCost(s, item.id, qty) : item.cost;
   const missing = !owned && "ingredients" in item && Object.entries(item.ingredients ?? {}).some(([id, n]) => (s.inventory[id] ?? 0) < n);
   const affordable = owned || s.honey >= total;
@@ -134,7 +134,7 @@ export default function ShopExperience({
           <p>+{Math.round((item.speed - 1) * 100)}% Movespeed</p>
         )}
         <p>
-          {item.gate > 0
+          {s.adminShopUnlocks && owned ? "Unlocked in admin menu." : item.gate > 0
             ? `Requires ${item.gate} bees.`
             : "Available to all beekeepers."}
         </p>

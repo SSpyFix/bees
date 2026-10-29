@@ -1,10 +1,27 @@
 import { describe, it, expect } from 'vitest';
 import { createGame, newBee, harvest, collect, awardHoney, hatch, serialize, restore } from '../game/systems/simulation';
-import { BEES } from '../game/data/content';
-import { grantAdminEgg, grantCraftingMaterials, maxLevelAllBees } from '../game/systems/admin';
+import { BEES, GEAR } from '../game/data/content';
+import { grantAdminEgg, grantCraftingMaterials, maxLevelAllBees, unlockAllShopItems } from '../game/systems/admin';
+import { buy } from '../game/systems/simulation';
 import { BOND_REQUIREMENTS } from '../game/data/progression';
 
 describe('admin tools', () => {
+  it('unlocks and saves all shop gear, slots, sprinklers and consumables without charging or changing the loadout',()=>{
+    const s=createGame(),tool=s.tool,bag=s.bag;
+    unlockAllShopItems(s);
+    expect(GEAR.every(g=>s.owned.includes(g.id))).toBe(true);
+    expect(s.slots).toBe(50);expect(s.sprinkler).toBe(4);
+    expect(s.inventory.mythicEgg).toBeGreaterThanOrEqual(1);
+    expect(s.inventory.starTreat).toBeGreaterThanOrEqual(1);
+    expect(s.tool).toBe(tool);expect(s.bag).toBe(bag);expect(s.honey).toBe(0);
+    const loaded=restore(serialize(s));
+    expect(loaded.adminShopUnlocks).toBe(true);
+    const highGear=GEAR.find(g=>g.type==='tool'&&g.gate===35)!;
+    expect(buy(loaded,highGear.id)).toBe(true);expect(loaded.tool).toBe(highGear.id);
+    expect(loaded.honey).toBe(0);
+    const owned=[...s.owned],eggs=s.inventory.mythicEgg;
+    unlockAllShopItems(s);expect(s.owned).toEqual(owned);expect(s.inventory.mythicEgg).toBe(eggs);
+  });
   it('maxes every owned bee and saves levels without changing species, gifted status or inventory',()=>{
     const s=createGame();s.bees.push(newBee(s,'bee-26'));
     s.bees[1].level=9;s.bees[1].bond=12;s.bees[1].gifted=true;

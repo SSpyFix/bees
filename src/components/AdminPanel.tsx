@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useGame } from '../game/systems/store';
 import { EGGS, MAX_BEE_LEVEL, type EggKind } from '../game/data/progression';
-import { grantAdminEgg, grantCraftingMaterials, maxLevelAllBees } from '../game/systems/admin';
+import { grantAdminEgg, grantCraftingMaterials, maxLevelAllBees, unlockAllShopItems } from '../game/systems/admin';
 
 export default function AdminPanel() {
   const { game, adminUnlocked, adminOpen, setAdminOpen, refresh, save } = useGame();
@@ -53,6 +53,7 @@ export default function AdminPanel() {
       <button className="button" onClick={()=>act(()=>{grantAdminEgg(game,egg,gifted);setMessage('Egg added. Hatch it from Inventory.');})}>Give selected egg</button>
       <button className="button secondary" onClick={()=>act(()=>{grantCraftingMaterials(game);setMessage('Added 999 of every crafting material.');})}>+999 crafting materials</button>
       <button className="button secondary" onClick={()=>act(()=>{maxLevelAllBees(game);setMessage(`All bees are now level ${MAX_BEE_LEVEL}.`);})}>Max level all bees</button>
+      <button className="button secondary" onClick={()=>act(()=>{unlockAllShopItems(game);setMessage("All shop equipment, hive slots and sprinklers unlocked. Shop consumables added.");})}>Unlock all shop items</button>
       <p role="status">{message}</p>
     </>}
   </aside>;

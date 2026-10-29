@@ -299,3 +299,21 @@ test('Mountain Top Shop sells the next hive slot at the correct price and caps a
  saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
  expect(saved.slots).toBe(50);expect(saved.honey).toBe(0);expect(saved.bees).toHaveLength(25);
 });
+
+test('admin unlock all grants shop ownership and lets a one-bee player equip unlocked gear for free',async({page})=>{
+ test.setTimeout(120000);await openMap(page);
+ await page.getByRole('button',{name:'Open settings',exact:true}).click();
+ await page.getByLabel('Admin code',{exact:true}).fill('4321');
+ await page.getByRole('button',{name:'Open admin menu',exact:true}).click();
+ await page.getByRole('button',{name:'Unlock all shop items',exact:true}).click();
+ let saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
+ expect(saved.adminShopUnlocks).toBe(true);expect(saved.slots).toBe(50);expect(saved.sprinkler).toBe(4);
+ expect(saved.inventory.mythicEgg).toBeGreaterThanOrEqual(1);expect(saved.honey).toBe(0);expect(saved.bees).toHaveLength(1);
+ await page.getByRole('complementary',{name:'Admin menu',exact:true}).getByRole('button',{name:'Hide',exact:true}).click();
+ await page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().open('shop','shop-35'));
+ await page.getByRole('button',{name:'View Coconut Canister',exact:true}).click();
+ await page.getByRole('button',{name:'Equip',exact:true}).click();
+ await expect(page.getByRole('button',{name:'✓ Equipped',exact:true})).toBeDisabled();
+ saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
+ expect(saved.bag).toBe('bag-6');expect(saved.honey).toBe(0);
+});
