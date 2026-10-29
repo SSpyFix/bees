@@ -1,5 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import GliderModel from "../game/player/GliderModel";
 import ToolModel from "../game/player/ToolModel";
 import PackModel from "../game/player/PackModel";
 import { BeeModel, Box, Ball } from "../game/world/models";
@@ -46,6 +47,8 @@ export default function ShopPreview({
             rarity={bee.rarity}
             animate={false}
           />
+        ) : type === "glider" ? (
+          <group position={[0,-2.8,0]} scale={.65}><GliderModel id={id}/></group>
         ) : type === "tool" ? (
           <group rotation={[-Math.PI / 2, 0, -0.4]} scale={2}>
             <ToolModel level={level} />

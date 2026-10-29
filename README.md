@@ -95,3 +95,11 @@ Hives begin with 25 slots. At the Mountain Top Shop, select **Hive Slot** to buy
 Price reference: [BSS hive slot table, slots 26–50](https://mobilematters.gg/roblox/get-more-bee-slots-bee-swarm-simulator).
 
 The admin panel's **Unlock all shop items** button grants all equipment, 50 hive slots, the top sprinkler, and at least one of each shop consumable. It preserves your equipped gear; choose an unlocked item in its shop and select **Equip**. Admin-granted equipment can be equipped without bee-count, material or honey requirements. This ownership and permission save locally.
+
+## Parachute and Glider
+
+Buy the **Parachute** for 500,000 honey in the Pro Shop (10 bees), or the faster **Glider** for 5,000,000 honey in the Mountain Top Shop (25 bees). Purchasing equips the item; both ownership and selection save locally. Admin **Unlock all shop items** includes both.
+
+Press Space to jump, then press Space again while airborne to deploy. WASD/arrows steer; with no direction held, you continue forward. Press Space again to fold, or land to close automatically. Deploying during a cannon launch exits its preset arc so you can steer yourself. Gliding does not bypass locked areas.
+
+Original stats and controls: [Parachute](https://beeswarmsimulatorwiki.com/wiki/parachute/) and [Glider](https://beeswarmsimulatorwiki.com/wiki/glider/). Original glide speed/float values are converted at the imported map's 0.35 scale and are independent of walking speed buffs.

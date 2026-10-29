@@ -317,3 +317,53 @@ test('admin unlock all grants shop ownership and lets a one-bee player equip unl
  saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
  expect(saved.bag).toBe('bag-6');expect(saved.honey).toBe(0);
 });
+
+test('buys and equips Parachute in Pro Shop and Glider in Mountain Top Shop',async({page})=>{
+ test.setTimeout(150000);
+ await openMap(page,{honey:5500000,bees:Array.from({length:25},()=>({kind:'bee-0',level:1})),position:map.places['shop-10']});
+ await page.keyboard.press('e');
+ await page.getByRole('button',{name:'View Parachute',exact:true}).click();
+ await page.getByRole('button',{name:/Buy & equip.*500,000 Honey/}).click();
+ let saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
+ expect(saved.glider).toBe('glider-0');expect(saved.honey).toBe(5000000);
+ await page.evaluate(async position=>{
+  const state=(await import('/src/game/systems/store.ts')).useGame.getState();
+  Object.assign(state.game.player,position);state.open('shop','shop-25');state.refresh();
+ },map.places['shop-25']);
+ await page.getByRole('button',{name:'View Glider',exact:true}).click();
+ await page.getByRole('button',{name:/Buy & equip.*5,000,000 Honey/}).click();
+ saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pollen-peak-save-v2')!));
+ expect(saved.glider).toBe('glider-1');expect(saved.honey).toBe(0);
+ expect(saved.owned).toEqual(expect.arrayContaining(['glider-0','glider-1']));
+});
+
+test('Space deploys and folds a steerable glider while airborne',async({page})=>{
+ test.setTimeout(120000);
+ await openMap(page,{owned:['tool-0','bag-0','glider-1'],glider:'glider-1'});
+ await page.evaluate(async()=>{
+  const state=(await import('/src/game/systems/store.ts')).useGame.getState();
+  Object.assign(state.game.player,{y:40,grounded:false,vy:0});state.refresh();
+ });
+ await page.keyboard.press('Space');
+ await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.gliding),{timeout:15000}).toBe(true);
+ const z=await page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z);
+ await page.keyboard.down('w');
+ await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.z),{timeout:15000}).toBeLessThan(z-2);
+ await page.keyboard.up('w');
+ await page.screenshot({path:'test-results/glider-deployed.png'});
+ await page.keyboard.press('Space');
+ await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.player.gliding)).toBe(false);
+});
+
+test('deploying a glider during a cannon launch hands control back to the player',async({page})=>{
+ test.setTimeout(120000);
+ await openMap(page,{owned:['tool-0','bag-0','glider-1'],glider:'glider-1',bees:Array.from({length:25},(_,i)=>({kind:`bee-${i}`,level:1})),position:map.places['red-cannon']});
+ await page.keyboard.press('e');
+ await expect.poll(()=>page.evaluate(async()=> (await import('/src/game/systems/store.ts')).useGame.getState().game.flight?.elapsed??0),{timeout:30000}).toBeGreaterThan(.4);
+ await page.keyboard.press('Space');
+ const state=await page.evaluate(async()=>{
+  const s=(await import('/src/game/systems/store.ts')).useGame.getState().game;
+  return {flight:s.flight,gliding:s.player.gliding};
+ });
+ expect(state.flight).toBeNull();expect(state.gliding).toBe(true);
+});

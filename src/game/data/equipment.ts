@@ -7,7 +7,9 @@ export type Gear = {
   cost: number;
   gate: number;
   icon: string;
-  type: "tool" | "bag" | "boots" | "hat";
+  type: "tool" | "bag" | "boots" | "hat" | "glider";
+  glideSpeed?: number;
+  glideFallSpeed?: number;
   range?: number;
   power?: number;
   interval?: number;
@@ -198,7 +200,12 @@ export const EXTRAS: Gear[] = [
     shop: "shop-25",
   },
 ];
-export const GEAR = [...TOOLS, ...BAGS, LEGACY_BAG, ...EXTRAS];
+// Roblox speeds converted using the imported map's 0.35 world scale.
+export const GLIDERS: Gear[] = [
+ {id:'glider-0',name:'Parachute',type:'glider',icon:'',cost:500000,gate:10,shop:'shop-10',glideSpeed:10.5,glideFallSpeed:4.9,description:'Glide down the mountain and reach new places. Press Space again while airborne to open; press again to fold.'},
+ {id:'glider-1',name:'Glider',type:'glider',icon:'',cost:5000000,gate:25,shop:'shop-25',glideSpeed:24.5,glideFallSpeed:8.4,description:'The upgraded Mountain Top glider: much faster flight and longer range than the Parachute. Press Space while airborne to open or fold.'},
+];
+export const GEAR = [...TOOLS, ...BAGS, LEGACY_BAG, ...EXTRAS, ...GLIDERS];
 const recipes: Record<string, Record<string, number>> = {
   "boots-1": { sunflowerSeed: 3, blueberry: 3 },
   "hat-1": { gumdrops: 25, pineapple: 100, moonCharm: 5 },

@@ -78,7 +78,7 @@ export default function ShopExperience({
       : Number(quantity)
     : 1;
   const equipped =
-    !consumables && [s.tool, s.bag, s.boots, s.hat].includes(item.id);
+    !consumables && [s.tool, s.bag, s.boots, s.hat, s.glider].includes(item.id);
   const owned = !consumables && s.owned.includes(item.id),
     locked = s.bees.length < item.gate && !(s.adminShopUnlocks && owned);
   const total = consumables ? purchaseCost(s, item.id, qty) : item.cost;

@@ -101,6 +101,7 @@ export type Game = {
   bag: string;
   boots: string;
   hat: string;
+  glider: string;
   owned: string[];
   slots: number;
   eggsPurchased: number;
@@ -125,6 +126,7 @@ export type Game = {
     invulnerable: number;
     moving: boolean;
     grounded: boolean;
+    gliding: boolean;
     swing: number;
   };
   flowers: Flower[];

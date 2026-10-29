@@ -599,7 +599,7 @@ function Settings() {
       <div className="controls-grid">
         {[
           ["W A S D", "Move"],
-          ["SPACE", "Jump"],
+          ["SPACE", "Jump · press again in air to glide / fold"],
           ["HOLD CLICK", "Gather pollen"],
           ["RIGHT DRAG", "Orbit camera"],
           ["SCROLL", "Zoom"],

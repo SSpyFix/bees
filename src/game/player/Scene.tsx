@@ -1,3 +1,4 @@
+import GliderModel from "./GliderModel";
 import { placeSprinkler } from "../systems/sprinklers";
 import { Suspense, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -11,6 +12,7 @@ import {
   claimHive,
   collect,
   movePlayer,
+  toggleGlider,
   nearestPlace,
   step,
   startConversion,
@@ -117,7 +119,10 @@ function Controller() {
       if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
         e.preventDefault();
         inp.keys.add(e.code);
-        if(e.code === 'Space') inp.jumpQueued = true;
+        if(e.code === 'Space') {
+          if(!game.player.grounded && toggleGlider(game)){state.refresh();}
+          else inp.jumpQueued = true;
+        }
         return;
       }
       if (state.menu) return;
@@ -248,7 +253,7 @@ function Controller() {
           r * Math.cos(i.yaw) - f * Math.sin(i.yaw),
           -f * Math.cos(i.yaw) - r * Math.sin(i.yaw),
           1 / 30,
-          i.jumpQueued || i.keys.has("Space"),
+          i.jumpQueued,
         );
         i.jumpQueued = false;
         if (i.gather && game.gatherCooldown <= 0) {
@@ -302,7 +307,7 @@ function Controller() {
   return (
     <group ref={body} name="player">
       <KeeperModel
-        moving={game.player.moving}
+        moving={game.player.moving && !game.player.gliding}
         swing={game.player.swing}
         converting={game.converting}
         bagLevel={Number(game.bag.split("-")[1])}
@@ -310,6 +315,7 @@ function Controller() {
         hatLevel={Number(game.hat.split("-")[1]) || 0}
         bootsLevel={Number(game.boots.split("-")[1]) || 0}
       />
+      {game.player.gliding && <GliderModel id={game.glider} />}
       {game.converting && (
         <mesh position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[1.7, 2, 24]} />

@@ -95,6 +95,7 @@ export function createGame(): Game {
     bag: "bag-0",
     boots: "",
     hat: "",
+    glider: "",
     owned: ["tool-0", "bag-0"],
     slots: 25,
     eggsPurchased: 0,
@@ -114,6 +115,7 @@ export function createGame(): Game {
       invulnerable: 0,
       moving: false,
       grounded: true,
+      gliding: false,
       swing: 0,
     },
     flowers: [],
@@ -489,24 +491,32 @@ function moveOnTerrain(s: Game, x: number, z: number) {
       break;
     }
     if (
-      h === null ||
+      (h === null && p.grounded) ||
       solidAt(nx, nz, p.y) ||
-      (h > p.y + 0.8 && p.vy <= 0)
+      (h !== null && h > p.y + 0.8 && p.vy <= 0)
     )
       break;
     p.x = nx;
     p.z = nz;
-    if (p.grounded && h > p.y && h <= p.y + 0.8) p.y = h;
+    if (p.grounded && h !== null && h > p.y && h <= p.y + 0.8) p.y = h;
   }
 }
 export function resetCharacter(s: Game) {
   Object.assign(s.player, importedMap.spawn, {
     yaw: Math.PI, vy: 0, hp: 100, invulnerable: 3,
-    moving: false, grounded: true, swing: 0,
+    moving: false, grounded: true, gliding: false, swing: 0,
   });
   s.flight = null;
   s.converting = false;
   notify(s, "Character reset to spawn.");
+}
+
+export function toggleGlider(s: Game) {
+  const gear=GEAR.find(g=>g.id===s.glider&&g.type==='glider');
+  if(s.player.grounded || !gear || !s.owned.includes(gear.id)) return false;
+  s.player.gliding=!s.player.gliding;
+  if(s.player.gliding) {s.flight=null;s.player.vy=-(gear.glideFallSpeed??5);}
+  return true;
 }
 
 export function movePlayer(
@@ -518,6 +528,8 @@ export function movePlayer(
 ) {
   const p = s.player;
   dt = clamp(dt, 0, 0.1);
+  const wasAirborne=!p.grounded;
+  if (p.grounded) p.gliding=false;
   if (s.flight) {
     const f = s.flight;
     f.elapsed = Math.min(f.duration, f.elapsed + dt);
@@ -537,6 +549,9 @@ export function movePlayer(
     }
     return;
   }
+  const glider=GEAR.find(g=>g.id===s.glider&&g.type==='glider');
+  if(!glider || !s.owned.includes(s.glider))p.gliding=false;
+  if(p.gliding && Math.hypot(dx,dz)<.01){dx=Math.sin(p.yaw);dz=Math.cos(p.yaw);}
   const len = Math.hypot(dx, dz);
   p.moving = len > 0.01;
   if (len > 0) {
@@ -545,7 +560,7 @@ export function movePlayer(
     s.converting = false;
     p.yaw = Math.atan2(dx, dz);
   }
-  const speed =
+  const speed = p.gliding ? (glider?.glideSpeed??8) :
     8 *
     (GEAR.find((g) => g.id === s.boots)?.speed ?? 1) *
     multiplier(s, "haste") *
@@ -560,15 +575,21 @@ export function movePlayer(
     p.vy = multiplier(s, "bear-morph") > 1 ? 13 : 10.5;
     p.grounded = false;
   }
-  p.vy -= 22 * dt;
+  if(p.gliding) p.vy=-(glider?.glideFallSpeed??5);
+  else p.vy -= 22 * dt;
   p.y += p.vy * dt;
   if (p.y <= ground) {
+    const required=lockedAt(p.x,p.z,s.bees.length,ground);
+    if(required && wasAirborne){Object.assign(p,importedMap.spawn,{vy:0,grounded:true,gliding:false});notify(s,`${required} bees required for that area.`);return;}
+    p.gliding=false;
     p.y = ground;
     p.vy = 0;
     p.grounded = true;
-  }
+  } else p.grounded=false;
   if (p.y < -45) {
     Object.assign(p, importedMap.spawn);
+    p.gliding=false;
+    p.grounded=true;
     p.vy = 0;
   }
 }
@@ -655,6 +676,7 @@ export function buy(s: Game, id: string, quantity = 1) {
     }
     if (item.type === "boots") s.boots = id;
     if (item.type === "hat") s.hat = id;
+    if (item.type === "glider") {s.glider=id;s.player.gliding=false;}
     notify(s, `${item.name} equipped.`);
     return true;
   }
@@ -1050,6 +1072,8 @@ export function interactPlace(s: Game, id: string) {
       duration: 3.5,
     };
     s.converting = false;
+    s.player.gliding=false;
+    s.player.grounded=false;
     notify(s, "Cannon launched!");
     return true;
   }
@@ -1363,6 +1387,8 @@ function enemies(s: Game, dt: number) {
         p.x = home(s).x;
         p.y = home(s).y;
         p.z = home(s).z - 8;
+        p.gliding=false;
+        p.vy=0;
         p.hp = 100;
         p.invulnerable = 5;
         s.pollen = Math.floor(s.pollen * 0.8);
@@ -1452,6 +1478,7 @@ export function serialize(s: Game) {
     bag: s.bag,
     boots: s.boots,
     hat: s.hat,
+    glider: s.glider,
     owned: s.owned,
     slots: s.slots,
     eggsPurchased: s.eggsPurchased,
@@ -1514,7 +1541,9 @@ export function restore(raw: string | null): Game {
           ]),
         ]
       : s.owned;
-    for (const key of ["tool", "bag", "boots", "hat"] as const) {
+    s.adminShopUnlocks = d.adminShopUnlocks === true;
+    if(s.adminShopUnlocks)s.owned=[...new Set([...s.owned,...GEAR.map(g=>g.id)])];
+    for (const key of ["tool", "bag", "boots", "hat", "glider"] as const) {
       if (
         typeof d[key] === "string" &&
         s.owned.includes(d[key]) &&
@@ -1526,7 +1555,6 @@ export function restore(raw: string | null): Game {
       )
         s[key] = d[key];
     }
-    s.adminShopUnlocks = d.adminShopUnlocks === true;
     s.adminBoosts = { pollen: d.adminBoosts?.pollen === true, honey: d.adminBoosts?.honey === true };
     s.capacity = GEAR.find((b) => b.id === s.bag)?.capacity ?? 200;
     s.pollen = num(d.pollen, 0, s.capacity);
