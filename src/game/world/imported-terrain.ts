@@ -57,6 +57,28 @@ export class TriangleTerrain {
 }
 
 let active = new TriangleTerrain(new Float32Array());
-export function installTerrain(vertices: Float32Array) { active = new TriangleTerrain(vertices); }
+/** The original export contains an invisible box across the Red HQ approach.
+ * Match its exact corner triangles so nearby floors and building walls survive.
+ */
+export function removeRedHqBarrier(vertices: Float32Array): Float32Array {
+  const bounds = [[-49.645, -49.295], [5.25, 25.882], [-74.176, 1.281]];
+  const removed = new Set<number>();
+  for (let i = 0; i < vertices.length; i += 9) {
+    let matches = true;
+    for (let j = 0; j < 9; j++)
+      if (!bounds[j % 3].some(edge => Math.abs(vertices[i + j] - edge) < .003)) {
+        matches = false; break;
+      }
+    if (matches) removed.add(i);
+  }
+  if (!removed.size) return vertices;
+  const result = new Float32Array(vertices.length - removed.size * 9);
+  let offset = 0;
+  for (let i = 0; i < vertices.length; i += 9) if (!removed.has(i)) {
+    result.set(vertices.subarray(i, i + 9), offset); offset += 9;
+  }
+  return result;
+}
+export function installTerrain(vertices: Float32Array) { active = new TriangleTerrain(removeRedHqBarrier(vertices)); }
 export const importedSurface = (x: number, z: number, feet?: number) => active.surface(x, z, feet);
 export const importedSolid = (x: number, z: number, feet: number) => active.solid(x, z, feet);

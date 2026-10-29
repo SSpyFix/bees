@@ -8,6 +8,25 @@ async function openMap(page: Page, seed: Record<string, unknown> = {}) {
   await expect(page.locator('canvas[data-interactive="true"]')).toBeVisible({ timeout: 45000 });
 }
 
+test('crosses the Red HQ and Royal Jelly approach at shelf height with keyboard controls', async ({page}) => {
+  test.setTimeout(120000);
+  await openMap(page, {position: {x: -52, y: 5.232, z: -20}});
+  for (const direction of [-1, 1]) {
+    await page.evaluate(async direction => {
+      const state = (await import('/src/game/systems/store.ts')).useGame.getState();
+      Object.assign(state.game.player, {x: -49.47 - direction * .8, y: 6.16, z: -20, vy: 8, grounded: false});
+      state.refresh();
+    }, direction);
+    const key = direction < 0 ? 'a' : 'd';
+    await page.keyboard.down(key);
+    await expect.poll(() => page.evaluate(async direction => {
+      const p = (await import('/src/game/systems/store.ts')).useGame.getState().game.player;
+      return (p.x + 49.47) * direction;
+    }, direction), {timeout: 45000}).toBeGreaterThan(.6);
+    await page.keyboard.up(key);
+  }
+});
+
 test("renders the imported map and moves from the exported spawn", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));

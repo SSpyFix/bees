@@ -2,6 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanImportedPart, legacyPerimeterWall } from './map-cleanup.mjs';
 
+test('excludes the invisible Rose / Red HQ approach barrier on future map imports', () => {
+  const markers = [{name: 'Rose Field', position: [-74.18475, 6.15833, -50.237325], size: [46.2, 1, 28]}];
+  const wall = {opacity: 0, position: [-49.47, 15.566, -36.4475], size: [.35, 20.632, 75.457], rotation: [1,0,0,0,1,0,0,0,1]};
+  assert.equal(legacyPerimeterWall(wall, markers), true);
+  assert.equal(legacyPerimeterWall({...wall, opacity: 1}, markers), false);
+});
+
 test('removes short invisible Clover perimeter walls without removing visible terrain', () => {
   const markers = [{ name: 'Clover Field', position: [102.915, 10.95, -27.137], size: [53.2, 1, 40.6] }];
   const wall = { opacity: 0, position: [76.4025, 13.834, -26.175], size: [.175, 8.068, 41.65], rotation: [1,0,0,0,1,0,0,0,1] };

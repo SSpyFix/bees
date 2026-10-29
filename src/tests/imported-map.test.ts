@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { TriangleTerrain } from "../game/world/imported-terrain";
+import { TriangleTerrain, removeRedHqBarrier } from "../game/world/imported-terrain";
+import { BoxGeometry } from "three";
 import map from "../game/data/imported-map.json";
 import { FIELDS, PLACES, HIVE_PADS } from "../game/data/content";
 import { createGame, restore, serialize, movePlayer, collect } from "../game/systems/simulation";
@@ -7,6 +8,16 @@ import { solidAt, surface, lockedAt } from "../game/world/terrain";
 
 const floor = (y: number) => [-5,y,-5, 5,y,5, 5,y,-5, -5,y,-5, -5,y,5, 5,y,5];
 describe("imported collision geometry", () => {
+  it("removes only the twelve exported Red HQ barrier triangles", () => {
+    const box = new BoxGeometry(.35, 20.632, 75.457).translate(-49.47, 15.566, -36.4475).toNonIndexed();
+    const raw = new Float32Array([...box.getAttribute('position').array, ...floor(5.25)]);
+    const cleaned = removeRedHqBarrier(raw);
+    expect(raw.length - cleaned.length).toBe(12 * 9);
+    expect(removeRedHqBarrier(cleaned)).toBe(cleaned);
+    const other = new Float32Array(floor(5.25));
+    expect(removeRedHqBarrier(other)).toBe(other);
+    box.dispose();
+  });
   it("selects the floor beneath the player rather than an overhead bridge", () => {
     const terrain = new TriangleTerrain(new Float32Array([...floor(0), ...floor(8)]));
     expect(terrain.surface(0, 0, 0)).toBeCloseTo(0);
@@ -22,6 +33,22 @@ describe("imported collision geometry", () => {
 });
 
 describe("playable imported map", () => {
+  it("allows crossing the invisible Red HQ and Royal Jelly approach wall in both directions", () => {
+    for (const z of [-10, -20, -40]) {
+      expect(solidAt(-49.47, z, 6.16), `Red HQ approach at ${z}`).toBe(false);
+      for (const direction of [-1, 1]) {
+        const s = createGame();
+        s.bees = Array.from({length: 5}, () => ({...s.bees[0]}));
+        Object.assign(s.player, {x: -49.47 - direction * 2, y: 6.16, z});
+        for (let i = 0; i < 12; i++) movePlayer(s, direction, 0, .1);
+        expect((s.player.x + 49.47) * direction).toBeGreaterThan(1);
+      }
+    }
+    // The raised shelf still has a floor, and the HQ building walls remain solid.
+    expect(surface(-55, -20, 6.16)).not.toBeNull();
+    expect(solidAt(-64.314, -10, 5.4)).toBe(true);
+    expect(lockedAt(-74, -50, 1, 6.16)).toBe(5);
+  });
   it("leaves Clover Field's invisible perimeter open", () => {
     const field = FIELDS.find((f) => f.id === "clover")!;
     for (const [x, z] of [[76.4, field.z], [129.43, field.z], [field.x, -47.17]]) {
