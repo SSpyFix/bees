@@ -16,8 +16,9 @@ export default memo(function ImportedMap() {
         const opened=openFifteenBeeGate(object.geometry);
         if(opened!==object.geometry){object.geometry.dispose();object.geometry=opened;}
         object.receiveShadow = true;
-        // The imported map is large; dynamic actors provide the moving shadows.
-        object.castShadow = false;
+        // Transparent decals and overlays must not turn into opaque shadow cards.
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        object.castShadow = materials.every((material) => !material.transparent);
       }
     });
   }, [scene]);

@@ -1,4 +1,5 @@
 import GliderModel from "./GliderModel";
+import Daylight from "./Daylight";
 import { placeSprinkler } from "../systems/sprinklers";
 import { Suspense, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -329,35 +330,19 @@ export default function Scene() {
   const quality = useGame((s) => s.game.settings.quality);
   return (
     <Canvas
-      shadows={quality === "high"}
+      shadows={quality === "high" ? "soft" : false}
       dpr={quality === "low" ? 1 : [1, 1.5]}
       camera={{ position: [12, 17, 24], fov: 50, near: 0.2, far: 850 }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
-        gl.setClearColor("#9ecbfa");
-        gl.toneMapping = THREE.NoToneMapping;
+        gl.setClearColor("#b5d8f5");
+        gl.toneMapping = THREE.NeutralToneMapping;
         gl.toneMappingExposure = 1;
       }}
     >
-      <color attach="background" args={["#9ecbfa"]} />
-      <fog attach="fog" args={["#9ecbfa", 180, 600]} />
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={["#ffffff", "#8caa73", 0.8]} />
-      <directionalLight
-        position={[-35, 65, 25]}
-        intensity={1.5}
-        color="#ffffff"
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-75}
-        shadow-camera-right={75}
-        shadow-camera-top={80}
-        shadow-camera-bottom={-80}
-        shadow-camera-near={1}
-        shadow-camera-far={160}
-        shadow-bias={-0.0004}
-        shadow-normalBias={0.1}
-      />
+      <color attach="background" args={["#b5d8f5"]} />
+      <fog attach="fog" args={["#b5d8f5", 180, 600]} />
+      <Daylight shadows={quality === "high"} />
       <Suspense fallback={null}>
         <HiveItemDrop />
         <World />
